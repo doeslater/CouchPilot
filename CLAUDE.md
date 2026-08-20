@@ -58,3 +58,9 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
 - **minSdk 24 / targetSdk 37 / compileSdk 37**, Kotlin `2.2.10`, Java 11 compatibility, AGP `9.3.1`. Dependency
   versions are centralized in `gradle/libs.versions.toml` (version catalog) — add new dependencies there rather
   than hardcoding versions in `app/build.gradle.kts`.
+- **Dependency injection:** Hilt (KSP-based annotation processing, not kapt). `CouchPilotApp`
+  (`@HiltAndroidApp`) is registered as the `Application` class in the manifest; `MainActivity` is
+  `@AndroidEntryPoint`; ViewModels are `@HiltViewModel` with `@Inject constructor(...)` and obtained in
+  Composables via `hiltViewModel()` (not the plain `viewModel()` factory). Follow this same pattern for new
+  ViewModels/screens. No `@Module`/`@Provides` bindings exist yet — add them once there's an actual dependency
+  (e.g. a TMDB repository) that needs providing rather than direct `@Inject constructor` construction.

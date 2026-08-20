@@ -37,7 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 
 val images = arrayOf(
     // Image generated using Gemini from the prompt "cupcake image"
@@ -55,7 +55,7 @@ val imageDescriptions = arrayOf(
 
 @Composable
 fun BakingScreen(
-    bakingViewModel: BakingViewModel = viewModel()
+    bakingViewModel: BakingViewModel = hiltViewModel()
 ) {
     val selectedImage = remember { mutableIntStateOf(0) }
     val placeholderPrompt = stringResource(R.string.prompt_placeholder)
