@@ -20,12 +20,12 @@ of work, and update the checkboxes below as phases land.
 - [x] **Phase 2** — TVmaze integration ("What's On Tonight?" with real data); later extended to a
       full "This Week" day-selector, not just today (see Phase 2's writeup)
 - [x] **Phase 3** — Room offline-first cache + Wi-Fi prefetch
-- [ ] Phase 4 — Swipe onboarding + preference storage
-- [~] Phase 5 — Real scorer not built, but a **non-personalized placeholder ranking already
-      landed** (sort by TVmaze's own show rating) — see Phase 5's writeup for what it needs to be
-      replaced/blended with once Phase 4 exists
-- [~] Phase 6 — Watch providers landed early (Discover's filter chips); the ShowDetail screen +
-      "open app / Play Store" deep-link substitute have not
+- [x] **Phase 4** — Swipe onboarding + preference storage
+- [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
+      (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
+- [~] Phase 6 — Watch providers + a real `ShowDetailScreen` landed; the screen has no provider
+      logos/deep-link buttons on it yet, and only onboarding's info button navigates to it —
+      Discover's poster tap still opens a browser instead
 - [ ] Phase 7 — Implicit signals, polish, tests
 
 ## Reality checks against general_idea.md (apply throughout)
@@ -115,9 +115,10 @@ live TMDB data, Firebase AI gone entirely.
 ### Phase 3 — Room offline-first cache + Wi-Fi prefetch ✅ done
 **Goal:** the app works offline, per general_idea.md's "Smart Cache."
 
-- `core/database/CouchPilotDatabase.kt` (`@Database`, version 1) + `core/database/di/DatabaseModule.kt`.
-  As anticipated, this file imports entity types from both `tmdb/` and `tvmaze/` — one more concrete
-  argument (alongside CLAUDE.md's existing note) for eventually promoting to real Gradle modules.
+- `core/database/CouchPilotDatabase.kt` (`@Database`, now at version 4 — see Phases 4/5 for why it
+  kept bumping) + `core/database/di/DatabaseModule.kt`. As anticipated, this file imports entity
+  types from both `tmdb/` and `tvmaze/` — one more concrete argument (alongside CLAUDE.md's
+  existing note) for eventually promoting to real Gradle modules.
 - `tmdb/data/local/{TvShowEntity,TvShowDao}.kt`, `tvmaze/data/local/{ScheduleItemEntity,ScheduleDao}.kt`
   — real class names differ slightly from this doc's original sketch (`ScheduleEntity`), same idea.
 - `DefaultTmdbRepository`/`DefaultTvMazeRepository` are cache-then-refresh, but with **different
@@ -140,38 +141,68 @@ live TMDB data, Firebase AI gone entirely.
   data still renders) hasn't actually been run on-device yet — only the cache-hit path has unit-test
   coverage so far.
 
-### Phase 4 — Swipe onboarding + preference storage
+### Phase 4 — Swipe onboarding + preference storage ✅ done
 **Goal:** cold-start swipe UI that persists real signal (not literal "embeddings").
 
-- `onboarding/presentation/{OnboardingScreen,OnboardingViewModel,OnboardingUiState}.kt` — swipeable
-  card stack over Discover's existing TMDB trending pool (no new data source; independent of Phase
-  2's completion). Build the drag gesture with `Modifier.pointerInput` + `Animatable`/`graphicsLayer`
-  directly rather than a third-party swipe library.
-- `onboarding/data/local/{SwipeEventEntity,SwipeEventDao}.kt` — store raw events
-  (`showId, tmdbGenreIds, liked, timestampMillis`), not a pre-aggregated vector, so Phase 5's scorer
-  can be iterated on/replayed without re-collecting data.
-- `androidx.datastore:datastore-preferences` for a single "has completed onboarding" flag (Room
-  would be overkill for one boolean). Nav gate: unset flag → `Route.Onboarding` before `Route.Tonight`.
+- `onboarding/presentation/{OnboardingScreen,OnboardingViewModel,OnboardingUiState}.kt` — a swipeable
+  card stack over Discover's existing TMDB trending pool (`.take(15)`), *plus* explicit
+  dislike/info/like tap buttons (not just drag) — the info button routes to `Route.ShowDetail`
+  (Phase 6). Drag gesture built with `Modifier.pointerInput` + `Animatable`/`graphicsLayer`, no
+  third-party swipe library, exactly as planned.
+- `onboarding/data/local/{SwipeEventEntity,SwipeEventDao}.kt` — raw events
+  (`showId, genreIds: String (comma-joined), liked, timestampMillis`), matching the plan: not a
+  pre-aggregated vector, so the scorer can be replayed without re-collecting data.
+- `core/data/PreferencesRepository.kt` — `androidx.datastore:datastore-preferences`, a single
+  `onboarding_completed` boolean, exactly as planned (Room would've been overkill). `MainViewModel`
+  exposes it; `CouchPilotNavHost` gates into `Route.Onboarding` via a `LaunchedEffect` when unset,
+  and pops back out to `Route.Tonight` once it flips true.
+- **Two real bugs found and fixed here** (see git log for the full writeups):
+  - `SwipeableCard`'s `remember { Animatable(0f) }` wasn't keyed to `show.id`, so Compose reused
+    the previous card's post-swipe offset for the next card — it rendered flung off-screen,
+    looking frozen after the first swipe. Fixed with `remember(show.id) { ... }`.
+  - Adding `TvShowEntity.genreIds` (needed for Phase 5) changed the Room schema without bumping
+    `CouchPilotDatabase`'s version, crashing every launch against an existing on-disk DB
+    (`fallbackToDestructiveMigration()` only triggers on an actual version bump, not same-version
+    schema drift). This happened *twice* in this phase's work (once for `TvShowEntity.genreIds`,
+    again for `ScheduleItemEntity.genreIds` in Phase 5) — bump the version on every entity change,
+    not just when it's convenient to remember.
+- Verified on-device: a full 18-tap session through the 15-show deck completes onboarding and
+  reaches Discover/Tonight with no crashes; individual dislike/info/like buttons and the drag
+  gesture all independently confirmed working (info button correctly opens `ShowDetailScreen`,
+  back navigation returns to the same onboarding card). **Not yet independently verified**: that
+  the completed flag survives an actual process death after finishing onboarding (only verified
+  within one continuous session).
 
-### Phase 5 — Local recommendation engine (heuristic, not TFLite)
+### Phase 5 — Local recommendation engine (heuristic, not TFLite) ✅ done
 **Goal:** turn swipe/genre signal into real ranking — the app's actual "AI," deliberately plain Kotlin.
 
-- **A placeholder already exists**: `recommendation/domain/ScheduleRanking.kt`'s `rankedByRating()`
-  sorts Tonight's schedule by TVmaze's own show rating (descending, unrated last) — added when
-  Phase 2 grew into "This Week" and needed *some* ordering better than raw airtime, before Phase 4
-  (swipe signal) exists to build a real preference vector from. It's explicitly not personalization,
-  just "well-rated first." This phase's real scorer should replace it (or blend TVmaze rating in as
-  one input) rather than leave two unrelated ranking paths sitting side by side — don't just add
-  `CosineSimilarityScorer` next to it and call both from different places.
-- `recommendation/domain/{PreferenceVector,RecommendationScorer}.kt` — genre-weight map built from
-  `SwipeEventDao` (liked → positive weight, disliked → negative, optionally recency-decayed).
-- `recommendation/domain/CosineSimilarityScorer.kt` — plain dot-product/norm arithmetic, zero new
-  dependencies.
-- `TonightViewModel`/`DiscoverViewModel` sort through the scorer instead of raw API order.
-- Model the weight type as `Double` (not just ±1) now, so Phase 7's dwell-time signal doesn't force
-  a rework later.
-- Set expectations explicitly (in code comments and to yourself): ~19 TMDB TV genres makes this a
-  coarse signal, good for "roughly matches what you swiped right on," not strong personalization.
+- `recommendation/domain/{PreferenceVector,RecommendationScorer}.kt` — landed as two files, not
+  three: `PreferenceVector` (a `Map<genreId, Double>` + its magnitude) and `RecommendationScorer`,
+  which does double duty as both the vector-builder (`computePreferenceVector()`, reading
+  `SwipeEventDao`: liked → +1.0, disliked → -1.0 per genre) *and* the cosine-similarity scorer
+  (`score(genreIds, userTaste)`, normalized to `[0..1]`) — no separate `CosineSimilarityScorer`
+  file, weight type is `Double` as planned. Zero new dependencies, plain `kotlin.math.sqrt`.
+- `DiscoverViewModel`/`DefaultTmdbRepository.rankShows()` — sorts trending shows by
+  `score(show.genreIds, userTaste)`. Straightforward: TMDB's own `TvShow.genreIds` is real and
+  available with no bridging, so this one was correct on the first pass.
+- `TonightViewModel`/`DefaultTvMazeRepository` — **this side had a real bug**: TVmaze schedule
+  items don't carry TMDB genre IDs (TVmaze exposes free-text genre names, an incompatible
+  vocabulary), so an initial version of the repository-level ranking called the scorer, computed a
+  real preference vector, and then discarded it — scoring every item with a hardcoded `0.0`
+  regardless, silently doing nothing while looking wired up. Fixed by moving the actual scoring to
+  `TonightViewModel.enrichSchedule()`, the one place `ScheduleItem`s already get bridged to a real
+  TMDB `TvShow` (for `posterUrl`) — genreIds now gets copied across in that same step, and the
+  re-rank (`score()`, rating as tie-breaker/cold-start fallback) happens right after. The repository
+  itself (`DefaultTvMazeRepository.rankByRating()`) now honestly does only a rating-only
+  pre-enrichment sort, with no `RecommendationScorer` dependency pretending otherwise.
+- `ScheduleItem`/`ScheduleItemEntity` gained a `genreIds` field to carry this (comma-joined in the
+  entity, same convention as `SwipeEventEntity`/`TvShowEntity`) — always empty until enrichment
+  populates it, by design.
+- Verified on-device: Tonight's ranking visibly reorders by rating in the cold-start case (no
+  genre overlap between swiped shows and the day's schedule); Discover's provider-filtered lists
+  render correctly with the scorer active. No crashes across the fix + a fresh onboarding pass.
+- Set expectations explicitly (in code and to yourself): ~19 TMDB TV genres makes this a coarse
+  signal, good for "roughly matches what you swiped right on," not strong personalization.
 
 ### Phase 6 — Watch providers + honest "open the app" deep-link substitute (partially done)
 **Goal:** ship the UK-streaming-availability idea, scoped to what's actually implementable.
@@ -179,17 +210,22 @@ live TMDB data, Firebase AI gone entirely.
 - **Already landed, ahead of schedule**, during the Discover work: `TmdbRepository.getWatchProviders()`
   / `getTrendingTvShows(providerId)`, `GET /tv/{id}/watch/providers` + `/discover/tv`, region
   `GB` (via `Constants.DEFAULT_REGION`, fixed from an initial `"US"` default caught in review) — as
-  filter chips on `DiscoverScreen`, not yet as anything on a show-detail screen. Tapping a poster
-  currently just opens the show's TMDB web page in a browser (`DiscoverScreen`'s click handler) —
-  that's a stand-in for real detail navigation, not this phase's deep-link substitute.
-- **Still to do:** `showdetail/presentation/{ShowDetailScreen,ShowDetailViewModel,ShowDetailUiState}.kt`
-  — provider logos + "Open" button per provider. This is where `Route.ShowDetail`'s NavHost
-  destination finally gets wired in (replacing the browser-link stand-in above).
-- `showdetail/data/InstalledAppLauncher.kt` — `PackageManager` installed-check + generic app-open
-  `Intent`, falling back to `market://details?id=...` when not installed. **Verify every provider
-  package name (BBC iPlayer, ITVX, All4, My5, Netflix) against a real installed APK on a device as
-  part of this phase's acceptance criteria — do not trust package names from search results**, and
-  make clear in the UI this opens the app/store listing, not the specific episode.
+  filter chips on `DiscoverScreen`.
+- **Also landed, during Phase 4's work**: `showdetail/presentation/{ShowDetailScreen,
+  ShowDetailViewModel,ShowDetailUiState}.kt` and `TmdbRepository.getTvShowById(id)` — a real detail
+  screen (poster, name, year, rating, overview, back button), `Route.ShowDetail`'s NavHost
+  destination finally wired in. Verified on-device, reachable today only from onboarding's info
+  button, not from Discover — `DiscoverScreen`'s poster tap still opens the show's TMDB web page in
+  a browser rather than navigating to `ShowDetailScreen`.
+- **Still to do:**
+  - Wire `DiscoverScreen`'s poster tap to `Route.ShowDetail` instead of the browser stand-in.
+  - Add provider logos + "Open" button per provider to `ShowDetailScreen` (the screen exists, but
+    shows none of the watch-provider data `TmdbRepository.getWatchProviders()` already provides).
+  - `showdetail/data/InstalledAppLauncher.kt` — `PackageManager` installed-check + generic app-open
+    `Intent`, falling back to `market://details?id=...` when not installed. **Verify every provider
+    package name (BBC iPlayer, ITVX, All4, My5, Netflix) against a real installed APK on a device
+    as part of this phase's acceptance criteria — do not trust package names from search results**,
+    and make clear in the UI this opens the app/store listing, not the specific episode.
 
 ### Phase 7 — Implicit signals, polish, tests
 **Goal:** close the "privacy-preserving AI sync" loop and bring test coverage up to the rest of the
@@ -213,10 +249,13 @@ architecture's implied standard.
   whitelist filtering behaves before wiring it into the UI.
 - Phase 3: kill network (airplane mode) after one successful fetch, relaunch, confirm cached data
   still renders.
-- Phase 4: complete onboarding twice; confirm the flag persists across process death (not just
-  in-memory) and the swipe events land in the DB (`adb shell run-as ... sqlite3` or a debug DB
-  inspector).
+- Phase 4: complete onboarding, force-stop the app (not just background it), relaunch, and confirm
+  it goes straight to Tonight instead of restarting onboarding — done once end-to-end within a
+  single session, but not yet re-verified specifically across a real process death.
 - Phase 5: unit-test the cosine scorer directly on a couple of hand-built vectors with known
-  expected ordering, before trusting it inside a ViewModel.
+  expected ordering, before trusting it inside a ViewModel. When wiring a scorer into a *new* data
+  source, check whether that source's items actually carry the genre vocabulary the scorer expects
+  (TMDB integer IDs) before writing the ranking call — TVmaze's items didn't, which is exactly how
+  Phase 5's dead-code bug happened here.
 - Phase 6: manual on-device check — install/uninstall a provider app and confirm both branches
   (open app vs. Play Store fallback) actually fire.
