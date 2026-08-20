@@ -1,5 +1,6 @@
 package com.example.couchpilot.discover.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,6 +35,7 @@ fun DiscoverScreen(
     viewModel: DiscoverViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val uriHandler = LocalUriHandler.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -43,13 +46,21 @@ fun DiscoverScreen(
                 text = "Couldn't load trending shows: ${state.message}",
                 modifier = Modifier.align(Alignment.Center).padding(16.dp),
             )
-            is DiscoverUiState.Success -> TrendingGrid(shows = state.shows)
+            is DiscoverUiState.Success -> TrendingGrid(
+                shows = state.shows,
+                onShowClick = { show ->
+                    uriHandler.openUri("https://www.themoviedb.org/tv/${show.id}")
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun TrendingGrid(shows: List<TvShow>) {
+private fun TrendingGrid(
+    shows: List<TvShow>,
+    onShowClick: (TvShow) -> Unit,
+) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = Modifier.fillMaxSize(),
@@ -57,13 +68,21 @@ private fun TrendingGrid(shows: List<TvShow>) {
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(shows, key = { it.id }) { show -> ShowPoster(show) }
+        items(shows, key = { it.id }) { show ->
+            ShowPoster(
+                show = show,
+                modifier = Modifier.clickable { onShowClick(show) }
+            )
+        }
     }
 }
 
 @Composable
-private fun ShowPoster(show: TvShow) {
-    Column {
+private fun ShowPoster(
+    show: TvShow,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
         AsyncImage(
             model = show.posterUrl,
             contentDescription = show.name,
