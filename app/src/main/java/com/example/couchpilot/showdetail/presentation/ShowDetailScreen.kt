@@ -76,7 +76,9 @@ fun ShowDetailScreen(
                     ShowDetailContent(
                         show = state.show,
                         providers = state.providers,
-                        onProviderClick = { viewModel.onProviderClick(context, it) }
+                        userVote = state.userVote,
+                        onProviderClick = { viewModel.onProviderClick(context, it) },
+                        onVote = viewModel::onVote
                     )
                 }
             }
@@ -88,7 +90,9 @@ fun ShowDetailScreen(
 private fun ShowDetailContent(
     show: TvShow,
     providers: List<WatchProvider>,
-    onProviderClick: (String) -> Unit
+    userVote: Boolean?,
+    onProviderClick: (String) -> Unit,
+    onVote: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -103,18 +107,38 @@ private fun ShowDetailContent(
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f) // Backdrop style
         )
-        
+
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = show.name,
-                style = MaterialTheme.typography.headlineMedium
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = show.name,
+                    style = MaterialTheme.typography.headlineMedium,
+                    modifier = Modifier.weight(1f)
+                )
+                // Material's icon-core artifact doesn't include ThumbUp/ThumbDown outline
+                // variants (only material-icons-extended does, which we're deliberately not
+                // pulling in for two icons) - plain emoji glyphs instead, tinted to show the vote.
+                IconButton(onClick = { onVote(true) }) {
+                    Text(
+                        text = "👍",
+                        color = if (userVote == true) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = { onVote(false) }) {
+                    Text(
+                        text = "👎",
+                        color = if (userVote == false) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             Text(
                 text = show.firstAirDate?.take(4) ?: "Unknown Date",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.secondary
             )
-            
+
             if (providers.isNotEmpty()) {
                 Text(
                     text = "Available on",

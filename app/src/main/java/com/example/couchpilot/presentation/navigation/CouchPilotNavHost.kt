@@ -3,6 +3,7 @@ package com.example.couchpilot.presentation.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -26,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
+import com.example.couchpilot.settings.presentation.SettingsScreen
 import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
 
@@ -34,6 +36,7 @@ private data class TopLevelTab(val route: Route, val label: String, val icon: Im
 private val topLevelTabs = listOf(
     TopLevelTab(Route.Tonight, "Tonight", Icons.Filled.Home),
     TopLevelTab(Route.Discover, "Discover", Icons.Filled.Star),
+    TopLevelTab(Route.Settings, "Settings", Icons.Filled.Settings),
 )
 
 @Composable
@@ -94,7 +97,10 @@ fun CouchPilotNavHost(
             composable<Route.Discover> {
                 DiscoverScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
             }
-            composable<Route.Onboarding> { 
+            composable<Route.Settings> {
+                SettingsScreen()
+            }
+            composable<Route.Onboarding> {
                 OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 
             }
             composable<Route.ShowDetail> { 

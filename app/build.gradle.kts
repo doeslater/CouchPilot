@@ -60,6 +60,13 @@ android {
         compose = true
         buildConfig = true
     }
+    testOptions {
+        // Without this, any unmocked Android SDK call reached from a plain JVM unit test
+        // (e.g. android.util.Log.w in DiscoverViewModel's provider-load failure path) throws
+        // "not mocked" instead of returning a harmless default - not worth pulling in
+        // Robolectric just to avoid that.
+        unitTests.isReturnDefaultValues = true
+    }
 }
 
 dependencies {

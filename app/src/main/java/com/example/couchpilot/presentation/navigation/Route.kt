@@ -11,6 +11,9 @@ sealed interface Route {
     data object Discover : Route
 
     @Serializable
+    data object Settings : Route
+
+    @Serializable
     data object Onboarding : Route
 
     /** Destination arrives once ShowDetailScreen exists (roadmap Phase 6). */

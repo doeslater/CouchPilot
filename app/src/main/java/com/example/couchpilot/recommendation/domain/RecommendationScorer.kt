@@ -20,7 +20,7 @@ class RecommendationScorer @Inject constructor(
 
         val weights = mutableMapOf<Int, Double>()
         events.forEach { event ->
-            val delta = if (event.liked) 1.0 else -1.0
+            val delta = (if (event.liked) 1.0 else -1.0) * event.weight
             event.genreIds.split(",")
                 .filter { it.isNotEmpty() }
                 .mapNotNull { it.toIntOrNull() }

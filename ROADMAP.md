@@ -25,7 +25,9 @@ of work, and update the checkboxes below as phases land.
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
 - [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
       Discover/Tonight both navigate to it — see Phase 6's writeup for the one caveat left
-- [ ] Phase 7 — Implicit signals, polish, tests
+- [x] **Phase 7** — Dwell-time + explicit vote signals, a Settings screen to clear local data, and
+      ViewModel unit tests across the app (see Phase 7's writeup — one real main-thread crash
+      found/fixed getting the "clear data" path working)
 
 ## Reality checks against general_idea.md (apply throughout)
 
@@ -85,11 +87,10 @@ live TMDB data, Firebase AI gone entirely.
 ### Phase 2 — TVmaze integration ("What's On Tonight?" with real data) ✅ done
 **Goal:** the Tonight grid shows the real UK broadcast schedule.
 
-- The networking stack moved from Ktor to Retrofit + Gson partway through Phase 1/2 (see
-  `core/data/RetrofitFactory.kt`, `core/di/NetworkModule.kt`), so this landed as
-  `tvmaze/domain/{ScheduleItem,TvMazeRepository}.kt`, `tvmaze/data/{RetrofitTvMazeRemoteDataSource,
-  TvMazeService,TvMazeMappers,dto/ScheduleDto}.kt`, `tvmaze/di/TvMazeModule.kt` — not the
-  Ktor-named files originally sketched here, but the same package convention as `tmdb/`. Calls
+- Landed as `tvmaze/domain/{ScheduleItem,TvMazeRepository}.kt`,
+  `tvmaze/data/{RetrofitTvMazeRemoteDataSource,TvMazeService,TvMazeMappers,dto/ScheduleDto}.kt`,
+  `tvmaze/di/TvMazeModule.kt` — Retrofit + Gson (`core/data/RetrofitFactory.kt`,
+  `core/di/NetworkModule.kt`), same package convention as `tmdb/`. Calls
   `/schedule?country=GB&date=...` (via `Constants.DEFAULT_REGION`), no auth header.
 - `tvmaze/domain/FreeviewChannels.kt` — a hand-maintained whitelist filtering the raw schedule
   client-side, matched by exact name or a `"<entry> "` prefix (regional variants like "BBC One
@@ -235,18 +236,56 @@ live TMDB data, Firebase AI gone entirely.
   SystemUI overlay glitch on this device (unrelated to the app) prevented a fresh screenshot of it
   specifically this round.
 
-### Phase 7 — Implicit signals, polish, tests
+### Phase 7 — Implicit signals, polish, tests ✅ done
 **Goal:** close the "privacy-preserving AI sync" loop and bring test coverage up to the rest of the
 architecture's implied standard.
 
-- Dwell-time capture (`LaunchedEffect` timing on show cards/detail) feeding Phase 5's scorer as a
-  weak, down-weightable signal (distraction ≠ interest — treat accordingly).
-- Explicit up/downvote buttons, same storage path as swipe events.
-- `settings/presentation/...` screen to clear local data / reset onboarding — meaningful proof point
-  for the "no accounts, everything local" pitch.
-- ViewModel unit tests for Tonight/Discover/Onboarding/ShowDetail/the scorer. Decide here whether to
-  stay on the existing JUnit4 setup or adopt JUnit5+Turbine+AssertK (needs `useJUnitPlatform()` and
-  new catalog entries — a real if small migration, not just one added dependency).
+- `SwipeEventEntity` gained a `weight: Double = 1.0` column (DB version 5 → 6) so
+  `RecommendationScorer.computePreferenceVector()` can treat signals with different confidence
+  differently (`delta = (liked ? 1 : -1) * weight`) instead of every event counting the same.
+- **Dwell-time capture**: `ShowDetailViewModel` starts a `viewModelScope.launch { delay(8s); ... }`
+  timer once a show loads, recording a weak positive (`weight = 0.3`) if the user is still on the
+  screen after 8 seconds. Deliberately *not* a Compose `LaunchedEffect` as originally sketched —
+  living on `viewModelScope` instead makes it plain suspend logic (unit-testable with a
+  `TestDispatcher` + `advanceTimeBy`) and gets cancellation for free: backing out before the
+  threshold cancels the coroutine via `onCleared()`, so a quick glance records nothing at all, only
+  genuine dwelling does.
+- **Explicit up/downvote**: 👍/👎 buttons on `ShowDetailScreen` next to the title, writing to the
+  same `SwipeEventDao` as onboarding's swipes (`weight = 1.0`, full confidence). Plain emoji glyphs,
+  not `Icons.Filled.ThumbUp/ThumbDown` — the latter's outline/filled variants only exist in
+  `material-icons-extended`, which wasn't worth pulling in for two icons.
+- **Settings screen**: new `core/domain/LocalDataManager` interface (+`DefaultLocalDataManager`,
+  Hilt-bound) wraps `CouchPilotDatabase.clearAllTables()` and resets the onboarding flag behind one
+  `clearAllLocalData()` call; `settings/presentation/{SettingsScreen,SettingsViewModel,
+  SettingsUiState}.kt` puts a confirm-dialog-gated button behind it, reachable via a third
+  "Settings" bottom-nav tab (`Route.Settings`). Resetting the onboarding flag alone sends the user
+  back through Onboarding — `CouchPilotNavHost` already reacted to that flag before this phase.
+- **Real bug found and fixed**: `clearAllTables()` is a blocking Room call and crashed with
+  `IllegalStateException` when invoked directly from `viewModelScope.launch {}` (main thread) —
+  confirmed on-device (tapping "Clear everything" crashed the app). Fixed by wrapping the call in
+  `withContext(Dispatchers.IO)` inside `DefaultLocalDataManager`; re-verified on-device with a clean
+  tap-through (no crash, swipe_events/schedule_items rows dropped to 0, `tv_shows` repopulated by
+  the next trending fetch, onboarding flag reset and the UI landed back on the swipe screen).
+- **ViewModel unit tests** added for `TonightViewModel`, `DiscoverViewModel`, `ShowDetailViewModel`
+  (`OnboardingViewModel`/`RecommendationScorer` already had them from earlier phases) — all MockK +
+  JUnit4, matching what was already there.
+  - **Decision: stayed on JUnit4**, did not migrate to JUnit5. Turbine and `kotlinx-coroutines-test`
+    were already in the catalog and unused, MockK was already the mocking convention, and nothing
+    about testing dwell-time (`StandardTestDispatcher` + `advanceTimeBy`/`runCurrent`) needed
+    anything JUnit5-specific — a migration would have been pure churn for a solo hobbyist project.
+  - `androidx.navigation.SavedStateHandle.toRoute()` decodes route args via a real
+    `android.os.Bundle` round-trip, which throws in a plain JVM unit test without Robolectric.
+    Rather than pull in Robolectric for one `Int` arg, `ShowDetailViewModel` now has two
+    constructors: a private-ish `internal` one taking `showId: Int` directly (what tests call), and
+    the `@Inject`-annotated one taking `SavedStateHandle` (what Hilt calls in production),
+    delegating to the first. Production decoding behavior is unchanged.
+  - Also hit `android.util.Log.w` throwing "not mocked" from `DiscoverViewModel`'s provider-load
+    failure path — fixed by adding `testOptions { unitTests.isReturnDefaultValues = true }` to
+    `app/build.gradle.kts` rather than `mockkStatic`-ing `Log` in every test that touches it.
+- Verified: `./gradlew testDebugUnitTest` green (20 tests) and `assembleDebug` clean; on-device,
+  confirmed the vote buttons and dwell timer both land correct rows in `swipe_events` (pulled the
+  live `couchpilot.db` + its `-wal`/`-shm` files via `run-as`/`exec-out` to see uncheckpointed
+  writes) with the expected `weight` values, and confirmed the Settings clear-data flow end-to-end.
 
 ## Verification (per phase, not just at the end)
 
@@ -267,3 +306,9 @@ architecture's implied standard.
   Phase 5's dead-code bug happened here.
 - Phase 6: manual on-device check — install/uninstall a provider app and confirm both branches
   (open app vs. Play Store fallback) actually fire.
+- Phase 7: for anything writing to Room from a ViewModel coroutine, don't assume `Dispatchers.Main`
+  is safe just because the call is inside `viewModelScope.launch {}` — `clearAllTables()` crashing
+  on-device is exactly that mistake. To verify a signal actually landed with the right weight
+  without waiting on `StateFlow`, pull the live db file **and** its `-wal`/`-shm` companions (Room
+  runs in WAL mode; recent writes live there until checkpointed, not in the base `.db` file) via
+  `adb exec-out run-as <pkg> cat ...` and query with a local `sqlite3`.
