@@ -8,11 +8,12 @@ CouchPilot is a planned local-first, privacy-focused UK TV recommendation app (s
 full concept: TVmaze/TMDB as free data sources, an on-device recommendation engine, Room for local storage,
 deep-links into UK catch-up apps like iPlayer/ITVX/Channel 4/My5, and no external user accounts).
 
-The current code is **not** that app yet — it is still the stock Android Studio template merged with Google's
-Gemini-in-Firebase "Baking" quickstart sample (`BakingScreen.kt` / `BakingViewModel.kt` / `UiState.kt`: pick a
-baked-goods photo, send it + a text prompt to a Firebase AI (`gemini-flash-latest`) model, show the response).
-Expect to replace this sample screen as the real TV-recommendation features are built; there is no
-recommendation engine, EPG fetching, or Room database implemented yet.
+The current code is a real skeleton of that app, not the full thing yet: two tabs (Tonight, Discover) behind
+real navigation, Discover showing live TMDB trending shows with posters. Firebase AI Logic and the leftover
+"Baking" sample it came with have been removed entirely — nothing in `general_idea.md` calls for an AI model,
+so that dependency and its `google-services.json` requirement are gone. There is no TVmaze/EPG data, no
+Room database, no recommendation engine, and no swipe onboarding yet — see `ROADMAP.md` for the phased plan
+to build those out (Phase 1, nav shell + Discover, is done; Phase 2 is TVmaze next).
 
 ## Build / lint / test commands
 
@@ -37,18 +38,15 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
   interface (`Initial` / `Loading` / `Success` / `Error`), collected in the Composable with `collectAsState()`.
   Follow this same shape (`XxxViewModel` + `XxxUiState` sealed interface) for new screens rather than introducing
   a different state-management approach.
-- **AI integration:** uses Firebase AI Logic (`com.google.firebase:firebase-ai`, the `google-services` Gradle
-  plugin) rather than calling a Gemini/TMDB/TVmaze REST endpoint directly. `Firebase.ai.generativeModel(...)` is
-  called straight from the ViewModel (no repository layer exists yet). This requires an `app/google-services.json`
-  which is **not** checked into the repo — get it from Firebase console setup before AI features will build/run
-  against a real project; without it, `assembleDebug` fails at `processDebugGoogleServices` even though the
-  code compiles.
-- **Secrets/API keys** (Firebase config, TMDB) must never be committed — per `general_idea.md`, this repo is
+- **No Firebase.** Firebase AI Logic and its `google-services.json` requirement were removed in roadmap
+  Phase 1 along with the Baking sample — don't re-add them without a real reason; nothing in `general_idea.md`
+  calls for an AI model.
+- **Secrets/API keys** (currently just TMDB) must never be committed — per `general_idea.md`, this repo is
   public and keys are expected to stay out of git entirely.
-  - Real values go in `secrets.properties` (gitignored, API keys only — deliberately separate from the
+  - Real values go in `secrets.properties` (gitignored — deliberately separate from the
     machine-specific `local.properties` so it can be synced across your own machines without clobbering
-    `sdk.dir`) and `app/google-services.json` (gitignored). `local.properties.example` /
-    `secrets.properties.example` are the checked-in templates documenting which keys a new dev needs to fill in.
+    `sdk.dir`). `local.properties.example` / `secrets.properties.example` are the checked-in templates
+    documenting which keys a new dev needs to fill in.
   - `app/build.gradle.kts` reads `secrets.properties` at configuration time and exposes the values via
     `buildConfigField` (`buildFeatures.buildConfig = true`), so app code reads them as
     `BuildConfig.TMDB_API_KEY` / `BuildConfig.TMDB_READ_ACCESS_TOKEN` — never read `secrets.properties`
@@ -57,6 +55,24 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
 - **minSdk 24 / targetSdk 37 / compileSdk 37**, Kotlin `2.2.10`, Java 11 compatibility, AGP `9.3.1`. Dependency
   versions are centralized in `gradle/libs.versions.toml` (version catalog) — add new dependencies there rather
   than hardcoding versions in `app/build.gradle.kts`.
+  - **Kotlin version skew is a real, recurring trap here**: the project is pinned to Kotlin `2.2.10`, but
+    plenty of libraries on their latest release are compiled with a newer Kotlin than that (e.g. Coil 3.5.0
+    requires a Kotlin stdlib metadata version our 2.2.10 compiler can't read — `coil = "3.3.0"`, compiled
+    against Kotlin 2.2.0, is what's actually in the catalog). If a new dependency's *latest* version fails to
+    compile with a cryptic "compiled with an incompatible version of Kotlin" error, check `./gradlew
+    :app:dependencyInsight --dependency kotlin-stdlib --configuration debugRuntimeClasspath` for what's forcing
+    a newer stdlib, then pin that library to an older release built against a Kotlin close to `2.2.10` —
+    don't reach for bumping the project's own Kotlin version as the first fix, since that cascades into KSP
+    (`ksp = "2.2.10-2.0.2"`, version-locked to the exact Kotlin version) and the Compose compiler plugin too.
+- **Navigation:** `androidx.navigation:navigation-compose` with `kotlinx.serialization`-backed type-safe
+  routes (not string routes) — `presentation/navigation/Route.kt` (sealed `Route` with `@Serializable` data
+  objects/classes) and `presentation/navigation/CouchPilotNavHost.kt` (bottom-tab `Scaffold` + `NavHost`,
+  `composable<Route.X> { ... }`). Add new top-level screens as another `Route` + `TopLevelTab` entry there;
+  add detail-style screens as a `Route` with no tab entry, wired into the `NavHost` block directly.
+- **Images:** Coil (`coil-compose` + `coil-network-okhttp`) via `AsyncImage(model = someUrl, ...)` — used for
+  TMDB posters in `DiscoverScreen`. `androidx.compose.material:material-icons-core` is an explicit dependency
+  too (not pulled in transitively by `material3` in this AGP/Compose combination) — needed for any
+  `Icons.Filled.*` usage, e.g. the nav bar's tab icons.
 - **Dependency injection:** Hilt (KSP-based annotation processing, not kapt). `CouchPilotApp`
   (`@HiltAndroidApp`) is registered as the `Application` class in the manifest; `MainActivity` is
   `@AndroidEntryPoint`; ViewModels are `@HiltViewModel` with `@Inject constructor(...)` and obtained in
@@ -82,8 +98,8 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
     `@Binds`. `TmdbRepository` is named/typed as a repository (not a data source) even though there's only one
     data source behind it today, because it's the seam a local Room cache would slot into later without
     presentation code changing — see general_idea.md's offline-first "Smart Cache" idea.
-  - Only `getTrendingTvShows()` exists so far — verified against the real TMDB API on a device, not just
-    compiled. Nothing in the UI calls it yet; `BakingScreen`/`BakingViewModel` are still the only visible screen.
+  - Only `getTrendingTvShows()` exists so far — verified against the real TMDB API on a device, and now
+    rendered by `DiscoverScreen` as a poster grid (via Coil — see below).
   - **Data Source vs Repository:** a class that talks to one data source (one remote API, one DB) is a
     `*DataSource`; only a class that itself coordinates multiple data sources (e.g. remote + local cache) should
     be called a `*Repository`. If this app grows past a couple of features, promote `core/` and each feature
