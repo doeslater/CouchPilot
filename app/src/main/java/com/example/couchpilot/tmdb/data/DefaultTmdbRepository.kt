@@ -3,20 +3,39 @@ package com.example.couchpilot.tmdb.data
 import com.example.couchpilot.core.domain.DataError
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.core.domain.map
+import com.example.couchpilot.core.domain.onSuccess
+import com.example.couchpilot.tmdb.data.local.TvShowDao
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
+import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 class DefaultTmdbRepository @Inject constructor(
     private val remoteDataSource: RetrofitTmdbRemoteDataSource,
+    private val tvShowDao: TvShowDao
 ) : TmdbRepository {
     override suspend fun getTrendingTvShows(providerId: Int?): Result<List<TvShow>, DataError> {
+        if (providerId == null) {
+            val cached = tvShowDao.getAllTvShows().first()
+            val isFresh = cached.isNotEmpty() && 
+                (System.currentTimeMillis() - cached.first().lastUpdated < 24 * 60 * 60 * 1000)
+            
+            if (isFresh) {
+                return Result.Success(cached.map { it.toTvShow() })
+            }
+        }
+
         val result = if (providerId == null) {
             remoteDataSource.getTrendingTvShows()
         } else {
             remoteDataSource.discoverTv(providerId = providerId)
         }
+
+        if (result is Result.Success && providerId == null) {
+            tvShowDao.insertTvShows(result.data.results.map { it.toEntity() })
+        }
+
         return result.map { dto -> dto.results.map { it.toTvShow() } }
     }
 

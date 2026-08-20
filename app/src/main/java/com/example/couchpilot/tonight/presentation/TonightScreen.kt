@@ -11,9 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +46,43 @@ fun TonightScreen(
                 text = state.message,
                 modifier = Modifier.align(Alignment.Center).padding(16.dp)
             )
-            is TonightUiState.Success -> ScheduleList(state.schedule)
+            is TonightUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
+                DaySelector(
+                    days = state.days,
+                    selectedDay = state.selectedDay,
+                    onDayClick = viewModel::selectDay,
+                )
+                if (state.schedule.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Text(
+                            text = "No Freeview shows matched for this day.",
+                            modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                        )
+                    }
+                } else {
+                    ScheduleList(state.schedule)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DaySelector(
+    days: List<DayOption>,
+    selectedDay: DayOption,
+    onDayClick: (DayOption) -> Unit,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(days, key = { it.apiDate }) { day ->
+            FilterChip(
+                selected = day == selectedDay,
+                onClick = { onDayClick(day) },
+                label = { Text(day.label) },
+            )
         }
     }
 }

@@ -10,5 +10,5 @@ import com.example.couchpilot.core.domain.Result
  * presentation code needing to change.
  */
 interface TvMazeRepository {
-    suspend fun getTonightSchedule(): Result<List<ScheduleItem>, DataError>
+    suspend fun getScheduleForDate(date: String): Result<List<ScheduleItem>, DataError>
 }
