@@ -41,13 +41,20 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
   plugin) rather than calling a Gemini/TMDB/TVmaze REST endpoint directly. `Firebase.ai.generativeModel(...)` is
   called straight from the ViewModel (no repository layer exists yet). This requires an `app/google-services.json`
   which is **not** checked into the repo — get it from Firebase console setup before AI features will build/run
-  against a real project; without it, Firebase AI calls will fail even though the code compiles.
-  - Secrets/API keys (Firebase config, future TMDB API key, etc.) must never be committed — per
-    `general_idea.md`, this repo is public and keys are expected to stay out of git entirely. Real values go
-    in `secrets.properties` (gitignored, API keys only — deliberately separate from the machine-specific
-    `local.properties` so it can be synced across your own machines without clobbering `sdk.dir`) and
-    `app/google-services.json` (gitignored). `local.properties.example` / `secrets.properties.example` are
-    the checked-in templates documenting which keys a new dev needs to fill in.
+  against a real project; without it, `assembleDebug` fails at `processDebugGoogleServices` even though the
+  code compiles.
+- **Secrets/API keys** (Firebase config, TMDB) must never be committed — per `general_idea.md`, this repo is
+  public and keys are expected to stay out of git entirely.
+  - Real values go in `secrets.properties` (gitignored, API keys only — deliberately separate from the
+    machine-specific `local.properties` so it can be synced across your own machines without clobbering
+    `sdk.dir`) and `app/google-services.json` (gitignored). `local.properties.example` /
+    `secrets.properties.example` are the checked-in templates documenting which keys a new dev needs to fill in.
+  - `app/build.gradle.kts` reads `secrets.properties` at configuration time and exposes the values via
+    `buildConfigField` (`buildFeatures.buildConfig = true`), so app code reads them as
+    `BuildConfig.TMDB_API_KEY` / `BuildConfig.TMDB_READ_ACCESS_TOKEN` — never read `secrets.properties`
+    directly from Kotlin/Java code, and never log/print those `BuildConfig` values. If `secrets.properties`
+    is missing, the build still succeeds with empty-string values (TMDB calls would just fail at runtime).
+    No repository/networking code consumes these yet — TMDB isn't actually called anywhere in the app.
 - **minSdk 24 / targetSdk 37 / compileSdk 37**, Kotlin `2.2.10`, Java 11 compatibility, AGP `9.3.1`. Dependency
   versions are centralized in `gradle/libs.versions.toml` (version catalog) — add new dependencies there rather
   than hardcoding versions in `app/build.gradle.kts`.
