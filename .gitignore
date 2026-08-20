@@ -1,0 +1,30 @@
+# Build artifacts
+.gradle
+/local.properties
+/build
+/captures
+.externalNativeBuild
+.cxx
+
+# IDE - Android Studio & IntelliJ
+.idea
+*.iml
+*.iws
+
+
+# Android Studio Navigation editor temp files
+.navigation/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Firebase config — contains project-specific keys, never commit
+app/google-services.json
+
+# API keys — never commit
+secrets.properties
+local.properties
+
+.cluade
+.kotlin
