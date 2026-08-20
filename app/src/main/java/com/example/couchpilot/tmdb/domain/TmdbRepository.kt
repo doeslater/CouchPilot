@@ -10,5 +10,6 @@ import com.example.couchpilot.core.domain.Result
  * "Smart Cache" idea) without presentation code needing to change.
  */
 interface TmdbRepository {
-    suspend fun getTrendingTvShows(): Result<List<TvShow>, DataError>
+    suspend fun getTrendingTvShows(providerId: Int? = null): Result<List<TvShow>, DataError>
+    suspend fun getWatchProviders(): Result<List<WatchProvider>, DataError>
 }

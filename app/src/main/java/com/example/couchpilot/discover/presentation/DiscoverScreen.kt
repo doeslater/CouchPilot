@@ -5,15 +5,21 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.couchpilot.tmdb.domain.TvShow
+import com.example.couchpilot.tmdb.domain.WatchProvider
 
 @Composable
 fun DiscoverScreen(
@@ -46,10 +53,59 @@ fun DiscoverScreen(
                 text = "Couldn't load trending shows: ${state.message}",
                 modifier = Modifier.align(Alignment.Center).padding(16.dp),
             )
-            is DiscoverUiState.Success -> TrendingGrid(
-                shows = state.shows,
-                onShowClick = { show ->
-                    uriHandler.openUri("https://www.themoviedb.org/tv/${show.id}")
+            is DiscoverUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
+                ProviderSelector(
+                    providers = state.providers,
+                    selectedId = state.selectedProviderId,
+                    onProviderClick = { viewModel.selectProvider(it) }
+                )
+                TrendingGrid(
+                    shows = state.shows,
+                    onShowClick = { show ->
+                        uriHandler.openUri("https://www.themoviedb.org/tv/${show.id}")
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProviderSelector(
+    providers: List<WatchProvider>,
+    selectedId: Int?,
+    onProviderClick: (Int?) -> Unit,
+) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        item {
+            FilterChip(
+                selected = selectedId == null,
+                onClick = { onProviderClick(null) },
+                label = { Text("All") }
+            )
+        }
+        items(providers, key = { it.id }) { provider ->
+            FilterChip(
+                selected = selectedId == provider.id,
+                onClick = { onProviderClick(provider.id) },
+                label = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (provider.logoUrl != null) {
+                            AsyncImage(
+                                model = provider.logoUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(CircleShape)
+                                    .padding(end = 4.dp)
+                            )
+                        }
+                        Text(provider.name)
+                    }
                 }
             )
         }

@@ -1,7 +1,9 @@
 package com.example.couchpilot.tmdb.data
 
 import com.example.couchpilot.tmdb.data.dto.TvShowDto
+import com.example.couchpilot.tmdb.data.dto.WatchProviderDto
 import com.example.couchpilot.tmdb.domain.TvShow
+import com.example.couchpilot.tmdb.domain.WatchProvider
 
 fun TvShowDto.toTvShow(): TvShow = TvShow(
     id = id,
@@ -10,4 +12,10 @@ fun TvShowDto.toTvShow(): TvShow = TvShow(
     posterUrl = TmdbImages.posterUrl(posterPath),
     voteAverage = voteAverage,
     firstAirDate = firstAirDate,
+)
+
+fun WatchProviderDto.toWatchProvider(): WatchProvider = WatchProvider(
+    id = providerId,
+    name = providerName,
+    logoUrl = TmdbImages.logoUrl(logoPath)
 )

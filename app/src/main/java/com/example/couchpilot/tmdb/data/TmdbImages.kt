@@ -6,4 +6,8 @@ object TmdbImages {
     fun posterUrl(path: String?, size: String = "w500"): String? {
         return path?.let { "$BASE_URL$size$it" }
     }
+
+    fun logoUrl(path: String?, size: String = "original"): String? {
+        return path?.let { "$BASE_URL$size$it" }
+    }
 }
