@@ -8,7 +8,7 @@ import com.example.couchpilot.tmdb.domain.TvShow
 import javax.inject.Inject
 
 class DefaultTmdbRepository @Inject constructor(
-    private val remoteDataSource: KtorTmdbRemoteDataSource,
+    private val remoteDataSource: RetrofitTmdbRemoteDataSource,
 ) : TmdbRepository {
     override suspend fun getTrendingTvShows(): Result<List<TvShow>, DataError> {
         return remoteDataSource.getTrendingTvShows()
