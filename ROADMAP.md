@@ -17,10 +17,13 @@ of work, and update the checkboxes below as phases land.
 ## Status
 
 - [x] **Phase 1** — Navigation shell, real screens, Baking sample + Firebase AI removed
-- [x] **Phase 2** — TVmaze integration ("What's On Tonight?" with real data)
-- [ ] Phase 3 — Room offline-first cache + Wi-Fi prefetch
+- [x] **Phase 2** — TVmaze integration ("What's On Tonight?" with real data); later extended to a
+      full "This Week" day-selector, not just today (see Phase 2's writeup)
+- [x] **Phase 3** — Room offline-first cache + Wi-Fi prefetch
 - [ ] Phase 4 — Swipe onboarding + preference storage
-- [ ] Phase 5 — Local recommendation engine (heuristic, not TFLite)
+- [~] Phase 5 — Real scorer not built, but a **non-personalized placeholder ranking already
+      landed** (sort by TVmaze's own show rating) — see Phase 5's writeup for what it needs to be
+      replaced/blended with once Phase 4 exists
 - [~] Phase 6 — Watch providers landed early (Discover's filter chips); the ShowDetail screen +
       "open app / Play Store" deep-link substitute have not
 - [ ] Phase 7 — Implicit signals, polish, tests
@@ -102,27 +105,40 @@ live TMDB data, Firebase AI gone entirely.
   immediately, then re-emits once enrichment completes.
 - Verified on-device: real dated schedule ("Thursday 20th August"), correct Freeview-only channels
   (ITV1, BBC One, Channel 4, E4), posters loading, no crashes.
+- **Extended beyond this phase's original "tonight only" scope, into "This Week":**
+  `TvMazeRepository.getScheduleForDate(date)` replaced the single-purpose `getTonightSchedule()`;
+  `TonightViewModel` builds 7 `DayOption`s (Today/Tomorrow/weekday+date) and `TonightScreen` gets a
+  `FilterChip` day-selector (same pattern as Discover's provider chips), each day an independent
+  fetch with the same rapid-tap job-cancellation fix Discover needed. Verified on-device: switching
+  days shows genuinely different real schedules (confirmed today vs. Friday 21st August).
 
-### Phase 3 — Room offline-first cache + Wi-Fi prefetch
+### Phase 3 — Room offline-first cache + Wi-Fi prefetch ✅ done
 **Goal:** the app works offline, per general_idea.md's "Smart Cache."
 
-- `core/database/CouchPilotDatabase.kt` (`@Database`) + `core/database/di/DatabaseModule.kt`.
-  Note: this one file necessarily imports entity types from `tmdb/`/`tvmaze/` — a small, accepted
-  inversion of the "core doesn't know about features" layering, and one more concrete argument
-  (alongside CLAUDE.md's existing note) for eventually promoting to real Gradle modules.
-- `tmdb/data/local/{TvShowEntity,TvShowDao}.kt`, `tvmaze/data/local/{ScheduleEntity,ScheduleDao}.kt`.
-- `DefaultTmdbRepository`/`DefaultTvMazeRepository` become cache-then-refresh: return cached rows
-  immediately if present, refresh over the network, update the DB, re-emit. Repository interfaces
-  don't change.
-- `core/sync/WeeklyPrefetchWorker.kt` (`CoroutineWorker`), `PeriodicWorkRequest` constrained to
-  `NetworkType.UNMETERED`, enqueued via `WorkManager.enqueueUniquePeriodicWork` from
-  `CouchPilotApp.onCreate`.
-- Decide and document an explicit cache TTL per data type up front (e.g. trending: daily; schedule:
-  per-day, since it's date-scoped) — offline-first without a stated invalidation rule tends to just
-  silently go stale.
-- New deps: `androidx.room:room-runtime`/`room-ktx:2.8.4` + `ksp(room-compiler:2.8.4)`,
-  `androidx.work:work-runtime:2.11.2` (depend on `work-runtime` directly, not `-ktx`, which is now a
-  near-empty compat shim on recent WorkManager releases).
+- `core/database/CouchPilotDatabase.kt` (`@Database`, version 1) + `core/database/di/DatabaseModule.kt`.
+  As anticipated, this file imports entity types from both `tmdb/` and `tvmaze/` — one more concrete
+  argument (alongside CLAUDE.md's existing note) for eventually promoting to real Gradle modules.
+- `tmdb/data/local/{TvShowEntity,TvShowDao}.kt`, `tvmaze/data/local/{ScheduleItemEntity,ScheduleDao}.kt`
+  — real class names differ slightly from this doc's original sketch (`ScheduleEntity`), same idea.
+- `DefaultTmdbRepository`/`DefaultTvMazeRepository` are cache-then-refresh, but with **different
+  freshness policies that should probably be reconciled**: TMDB checks a 24h `lastUpdated` timestamp
+  before trusting the cache (falls through to network once stale); the TVmaze schedule cache has
+  **no TTL at all** — any non-empty cached row for a date is trusted forever, which is fine for a
+  date already in the past but means a same-day schedule fetched early won't pick up later TVmaze
+  corrections/additions without a manual cache clear. This is the "decide an explicit TTL per data
+  type" work this phase originally called for — it's half-decided (TMDB) not fully.
+- `core/sync/WeeklyPrefetchWorker.kt` (`CoroutineWorker`, `@HiltWorker`) prefetches TMDB trending +
+  the next 7 days of TVmaze schedule concurrently (`async`/`awaitAll`), constrained to
+  `NetworkType.UNMETERED` + `requiresBatteryNotLow`, enqueued via `enqueueUniquePeriodicWork` from
+  `CouchPilotApp.onCreate` (`CouchPilotApp` now also implements `Configuration.Provider` for Hilt's
+  `HiltWorkerFactory`).
+- Room-backed DAO tests exist (`ScheduleDaoTest`, `TvShowDaoTest`, in-memory `Room` DB) plus
+  repository unit tests with MockK (`DefaultTmdbRepositoryTest`, `DefaultTvMazeRepositoryTest`).
+- New deps actually landed: `androidx.room:room-runtime`/`room-ktx:2.8.4` + `ksp(room-compiler:2.8.4)`,
+  WorkManager + Hilt-Work integration, MockK for the repository tests.
+- **Not yet verified**: the airplane-mode check below (kill network after one fetch, confirm cached
+  data still renders) hasn't actually been run on-device yet — only the cache-hit path has unit-test
+  coverage so far.
 
 ### Phase 4 — Swipe onboarding + preference storage
 **Goal:** cold-start swipe UI that persists real signal (not literal "embeddings").
@@ -140,6 +156,13 @@ live TMDB data, Firebase AI gone entirely.
 ### Phase 5 — Local recommendation engine (heuristic, not TFLite)
 **Goal:** turn swipe/genre signal into real ranking — the app's actual "AI," deliberately plain Kotlin.
 
+- **A placeholder already exists**: `recommendation/domain/ScheduleRanking.kt`'s `rankedByRating()`
+  sorts Tonight's schedule by TVmaze's own show rating (descending, unrated last) — added when
+  Phase 2 grew into "This Week" and needed *some* ordering better than raw airtime, before Phase 4
+  (swipe signal) exists to build a real preference vector from. It's explicitly not personalization,
+  just "well-rated first." This phase's real scorer should replace it (or blend TVmaze rating in as
+  one input) rather than leave two unrelated ranking paths sitting side by side — don't just add
+  `CosineSimilarityScorer` next to it and call both from different places.
 - `recommendation/domain/{PreferenceVector,RecommendationScorer}.kt` — genre-weight map built from
   `SwipeEventDao` (liked → positive weight, disliked → negative, optionally recency-decayed).
 - `recommendation/domain/CosineSimilarityScorer.kt` — plain dot-product/norm arithmetic, zero new
