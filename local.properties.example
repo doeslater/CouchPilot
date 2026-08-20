@@ -1,0 +1,14 @@
+# Copy this file to local.properties (which is gitignored) and fill in real values.
+# Never commit local.properties or any file containing real keys.
+#
+# This file is machine-specific (sdk.dir differs per computer). Actual API
+# keys go in secrets.properties instead — see secrets.properties.example —
+# so you can sync just that one file across your own machines without the
+# Android SDK path getting overwritten.
+
+# Android SDK location (Android Studio fills this in automatically).
+sdk.dir=/path/to/Android/Sdk
+
+# Firebase config for the AI Logic (Gemini) integration is NOT a properties
+# entry — download google-services.json from the Firebase console and place
+# it at app/google-services.json. It's gitignored; do not commit it.
