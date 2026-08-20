@@ -23,9 +23,8 @@ of work, and update the checkboxes below as phases land.
 - [x] **Phase 4** — Swipe onboarding + preference storage
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
-- [~] Phase 6 — Watch providers + a real `ShowDetailScreen` landed; the screen has no provider
-      logos/deep-link buttons on it yet, and only onboarding's info button navigates to it —
-      Discover's poster tap still opens a browser instead
+- [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
+      Discover/Tonight both navigate to it — see Phase 6's writeup for the one caveat left
 - [ ] Phase 7 — Implicit signals, polish, tests
 
 ## Reality checks against general_idea.md (apply throughout)
@@ -204,28 +203,37 @@ live TMDB data, Firebase AI gone entirely.
 - Set expectations explicitly (in code and to yourself): ~19 TMDB TV genres makes this a coarse
   signal, good for "roughly matches what you swiped right on," not strong personalization.
 
-### Phase 6 — Watch providers + honest "open the app" deep-link substitute (partially done)
+### Phase 6 — Watch providers + honest "open the app" deep-link substitute ✅ done
 **Goal:** ship the UK-streaming-availability idea, scoped to what's actually implementable.
 
-- **Already landed, ahead of schedule**, during the Discover work: `TmdbRepository.getWatchProviders()`
-  / `getTrendingTvShows(providerId)`, `GET /tv/{id}/watch/providers` + `/discover/tv`, region
-  `GB` (via `Constants.DEFAULT_REGION`, fixed from an initial `"US"` default caught in review) — as
-  filter chips on `DiscoverScreen`.
-- **Also landed, during Phase 4's work**: `showdetail/presentation/{ShowDetailScreen,
-  ShowDetailViewModel,ShowDetailUiState}.kt` and `TmdbRepository.getTvShowById(id)` — a real detail
-  screen (poster, name, year, rating, overview, back button), `Route.ShowDetail`'s NavHost
-  destination finally wired in. Verified on-device, reachable today only from onboarding's info
-  button, not from Discover — `DiscoverScreen`'s poster tap still opens the show's TMDB web page in
-  a browser rather than navigating to `ShowDetailScreen`.
-- **Still to do:**
-  - Wire `DiscoverScreen`'s poster tap to `Route.ShowDetail` instead of the browser stand-in.
-  - Add provider logos + "Open" button per provider to `ShowDetailScreen` (the screen exists, but
-    shows none of the watch-provider data `TmdbRepository.getWatchProviders()` already provides).
-  - `showdetail/data/InstalledAppLauncher.kt` — `PackageManager` installed-check + generic app-open
-    `Intent`, falling back to `market://details?id=...` when not installed. **Verify every provider
-    package name (BBC iPlayer, ITVX, All4, My5, Netflix) against a real installed APK on a device
-    as part of this phase's acceptance criteria — do not trust package names from search results**,
-    and make clear in the UI this opens the app/store listing, not the specific episode.
+- `TmdbRepository.getWatchProviders()` / `getTrendingTvShows(providerId)` (`GET /tv/{id}/watch/providers`
+  + `/discover/tv`, region `GB` via `Constants.DEFAULT_REGION`) — filter chips on `DiscoverScreen`.
+- `showdetail/presentation/{ShowDetailScreen,ShowDetailViewModel,ShowDetailUiState}.kt` — a real
+  detail screen: poster, name, year, rating, overview, **provider logos + an "Open" button per
+  provider** (`TmdbRepository.getWatchProvidersForShow(tvId)`, `GET /tv/{id}/watch/providers`,
+  region-keyed, `flatrate`+`buy`+`rent` deduped by provider id).
+- `showdetail/data/AppLauncher.kt` — `PackageManager` installed-check + generic app-open `Intent`,
+  falling back to `market://details?id=...` (then a plain web Play Store URL) when not installed.
+  Both `DiscoverScreen`'s poster tap and `TonightScreen`'s schedule rows now navigate to
+  `Route.ShowDetail` through the same `onShowClick` callback threaded down from
+  `CouchPilotNavHost` (Tonight's rows are only clickable once enrichment resolves a real TMDB id).
+- **Two real bugs found and fixed getting this working** (see git log for the full writeups):
+  - `DefaultTmdbRepository.getTvShowById()` only ever checked the Room cache with no network
+    fallback, so any show reached via Tonight (never inserted into `tvShowDao`, since only
+    `getTrendingTvShows()` populates it) always showed "Show not found" — confirmed on-device.
+    Fixed by adding TMDB's `GET /tv/{id}` as a fallback (a new `TvShowDetailDto`, since that
+    endpoint returns `genres: [{id,name}]` objects, not the flat `genre_ids: [int]` list/discover
+    endpoints use) and caching the result for next time.
+  - `AppLauncher.launchProviderApp()`: an unmapped provider fell through to a `market://
+    details?id=null` / matching web URL instead of doing nothing.
+- **Known caveat, carried forward from the original plan, not addressed**: provider package names
+  in `AppLauncher` (BBC iPlayer, ITVX, etc.) are still unverified against real installed APKs — do
+  that before trusting the "open app" path actually opens the right app on a real device.
+- Verified on-device: Tonight's "Dragons' Den" (previously "Show not found") now opens a full
+  detail screen with real data via the network-fallback fix, no crash. Discover's equivalent path
+  shares the identical `onShowClick` wiring already confirmed working on the Tonight side, though a
+  SystemUI overlay glitch on this device (unrelated to the app) prevented a fresh screenshot of it
+  specifically this round.
 
 ### Phase 7 — Implicit signals, polish, tests
 **Goal:** close the "privacy-preserving AI sync" loop and bring test coverage up to the rest of the
