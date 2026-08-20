@@ -17,4 +17,6 @@ data class ScheduleItemEntity(
     val posterUrl: String?,
     val date: String, // YYYY-MM-DD
     val rating: Double? = null,
+    // Comma-joined, same convention as TvShowEntity.genreIds - no List<Int> TypeConverter yet.
+    val genreIds: String = "",
 )

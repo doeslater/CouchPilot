@@ -50,5 +50,6 @@ fun ScheduleItemEntity.toScheduleItem(): ScheduleItem {
         imdbId = imdbId,
         posterUrl = posterUrl,
         rating = rating,
+        genreIds = if (genreIds.isBlank()) emptyList() else genreIds.split(",").map { it.toInt() },
     )
 }

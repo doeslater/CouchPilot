@@ -11,7 +11,12 @@ data class ScheduleItem(
     val summary: String?,
     val imdbId: String?,
     val posterUrl: String? = null,
-    // TVmaze's own show rating (0-10). Used today as a stand-in "recommendation" signal
-    // (see recommendation/domain/ScheduleRanking.kt) until Phases 4/5 land real preference data.
+    // TVmaze's own show rating (0-10) - used as the cold-start/fallback sort key when there's
+    // no swipe signal yet, and as a tie-breaker once there is (see DefaultTvMazeRepository).
     val rating: Double? = null,
+    // TMDB genre IDs, NOT TVmaze's (TVmaze exposes free-text genre names, a different
+    // vocabulary entirely - incompatible with RecommendationScorer, which is trained on TMDB
+    // genre IDs from swipe history). Always empty until TonightViewModel.enrichSchedule()
+    // bridges this show to TMDB and copies its genreIds in.
+    val genreIds: List<Int> = emptyList(),
 )

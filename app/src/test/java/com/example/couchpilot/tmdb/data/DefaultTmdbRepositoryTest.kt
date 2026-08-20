@@ -1,6 +1,8 @@
 package com.example.couchpilot.tmdb.data
 
 import com.example.couchpilot.core.domain.Result
+import com.example.couchpilot.recommendation.domain.PreferenceVector
+import com.example.couchpilot.recommendation.domain.RecommendationScorer
 import com.example.couchpilot.tmdb.data.dto.TrendingTvShowsResponseDto
 import com.example.couchpilot.tmdb.data.local.TvShowDao
 import com.example.couchpilot.tmdb.data.local.TvShowEntity
@@ -19,10 +21,12 @@ class DefaultTmdbRepositoryTest {
     private lateinit var repository: DefaultTmdbRepository
     private val remoteDataSource: RetrofitTmdbRemoteDataSource = mockk()
     private val tvShowDao: TvShowDao = mockk(relaxed = true)
+    private val scorer: RecommendationScorer = mockk(relaxed = true)
 
     @Before
     fun setup() {
-        repository = DefaultTmdbRepository(remoteDataSource, tvShowDao)
+        coEvery { scorer.computePreferenceVector() } returns PreferenceVector()
+        repository = DefaultTmdbRepository(remoteDataSource, tvShowDao, scorer)
     }
 
     @Test

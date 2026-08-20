@@ -5,6 +5,7 @@ import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.core.domain.map
 import com.example.couchpilot.core.domain.onSuccess
 import com.example.couchpilot.tmdb.data.local.TvShowDao
+import com.example.couchpilot.recommendation.domain.RecommendationScorer
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 class DefaultTmdbRepository @Inject constructor(
     private val remoteDataSource: RetrofitTmdbRemoteDataSource,
-    private val tvShowDao: TvShowDao
+    private val tvShowDao: TvShowDao,
+    private val recommendationScorer: RecommendationScorer
 ) : TmdbRepository {
     override suspend fun getTrendingTvShows(providerId: Int?): Result<List<TvShow>, DataError> {
         if (providerId == null) {
@@ -22,7 +24,7 @@ class DefaultTmdbRepository @Inject constructor(
                 (System.currentTimeMillis() - cached.first().lastUpdated < 24 * 60 * 60 * 1000)
             
             if (isFresh) {
-                return Result.Success(cached.map { it.toTvShow() })
+                return Result.Success(rankShows(cached.map { it.toTvShow() }))
             }
         }
 
@@ -36,7 +38,16 @@ class DefaultTmdbRepository @Inject constructor(
             tvShowDao.insertTvShows(result.data.results.map { it.toEntity() })
         }
 
-        return result.map { dto -> dto.results.map { it.toTvShow() } }
+        return result.map { dto -> rankShows(dto.results.map { it.toTvShow() }) }
+    }
+
+    private suspend fun rankShows(shows: List<TvShow>): List<TvShow> {
+        val userTaste = recommendationScorer.computePreferenceVector()
+        if (userTaste.isEmpty()) return shows
+
+        return shows.sortedByDescending { show ->
+            recommendationScorer.score(show.genreIds, userTaste)
+        }
     }
 
     override suspend fun getWatchProviders(): Result<List<WatchProvider>, DataError> {
@@ -52,6 +63,11 @@ class DefaultTmdbRepository @Inject constructor(
         return remoteDataSource.findByExternalId(imdbId).map { dto ->
             dto.tvResults.firstOrNull()?.toTvShow()
         }
+    }
+
+    override suspend fun getTvShowById(id: Int): Result<TvShow?, DataError> {
+        val cached = tvShowDao.getTvShowById(id)
+        return Result.Success(cached?.toTvShow())
     }
 
     private fun WatchProvider.priorityRank(): Int {

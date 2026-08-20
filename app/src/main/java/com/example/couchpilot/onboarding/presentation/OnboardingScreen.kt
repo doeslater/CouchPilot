@@ -3,26 +3,39 @@ package com.example.couchpilot.onboarding.presentation
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -40,9 +53,12 @@ import kotlin.math.roundToInt
 
 @Composable
 fun OnboardingScreen(
+    onShowInfo: (Int) -> Unit,
     viewModel: OnboardingViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val scope = rememberCoroutineScope()
+    val swipeActions = remember { Channel<Boolean>(Channel.CONFLATED) }
 
     Box(modifier = Modifier.fillMaxSize().padding(24.dp)) {
         when (val state = uiState) {
@@ -67,7 +83,7 @@ fun OnboardingScreen(
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                         Text(
-                            text = "Swipe right to like, left to skip",
+                            text = "Tap or swipe to decide",
                             style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.padding(bottom = 32.dp)
                         )
@@ -81,8 +97,47 @@ fun OnboardingScreen(
                             state.currentShow?.let { currentShow ->
                                 SwipeableCard(
                                     show = currentShow,
-                                    onSwiped = { liked -> viewModel.onSwipe(currentShow, liked) }
+                                    onSwiped = { liked -> viewModel.onSwipe(currentShow, liked) },
+                                    externalActions = swipeActions
                                 )
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
+                            horizontalArrangement = Arrangement.spacedBy(32.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            FilledTonalIconButton(
+                                onClick = { scope.launch { swipeActions.send(false) } },
+                                modifier = Modifier.size(64.dp),
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Dislike", modifier = Modifier.size(32.dp))
+                            }
+
+                            FilledTonalIconButton(
+                                onClick = { state.currentShow?.id?.let(onShowInfo) },
+                                modifier = Modifier.size(48.dp),
+                                shape = CircleShape
+                            ) {
+                                Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(24.dp))
+                            }
+
+                            FilledTonalIconButton(
+                                onClick = { scope.launch { swipeActions.send(true) } },
+                                modifier = Modifier.size(64.dp),
+                                shape = CircleShape,
+                                colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                    containerColor = Color(0xFFE91E63).copy(alpha = 0.2f),
+                                    contentColor = Color(0xFFE91E63)
+                                )
+                            ) {
+                                Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
                             }
                         }
                     }
@@ -95,12 +150,24 @@ fun OnboardingScreen(
 @Composable
 fun SwipeableCard(
     show: TvShow,
-    onSwiped: (Boolean) -> Unit
+    onSwiped: (Boolean) -> Unit,
+    externalActions: Channel<Boolean>? = null
 ) {
-    // Keyed to show.id: without this, Compose reuses the same Animatable slot (and its
-    // leftover post-swipe offset) when the next card takes this call site, so the new card
-    // renders already flung off-screen instead of resting at 0.
     val offsetX = remember(show.id) { Animatable(0f) }
+
+    LaunchedEffect(show.id) {
+        externalActions?.let { actions ->
+            for (liked in actions) {
+                if (liked) {
+                    offsetX.animateTo(1000f, tween(300))
+                    onSwiped(true)
+                } else {
+                    offsetX.animateTo(-1000f, tween(300))
+                    onSwiped(false)
+                }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -109,11 +176,6 @@ fun SwipeableCard(
                 rotationZ = offsetX.value / 20f
             }
             .pointerInput(show.id) {
-                // onDrag fires many times per second and isn't a suspend callback, so calling
-                // the suspend snapTo requires launching - but launching a new coroutine per
-                // delta (as this used to) piles up allocations under a fast drag. Route deltas
-                // through one channel-fed coroutine instead, so exactly one snapTo call is ever
-                // in flight, applied in order.
                 val dragDeltas = Channel<Float>(Channel.UNLIMITED)
                 coroutineScope {
                     launch {
@@ -174,22 +236,19 @@ fun ShowCard(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
-                    .graphicsLayer {
-                        // Basic gradient scrim simulation
-                    }
                     .padding(16.dp)
             ) {
                 Text(
                     text = show.name,
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    color = Color.White,
                     fontWeight = FontWeight.Bold
                 )
                 if (show.firstAirDate != null) {
                     Text(
                         text = show.firstAirDate.take(4),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = Color.White.copy(alpha = 0.8f)
                     )
                 }
             }

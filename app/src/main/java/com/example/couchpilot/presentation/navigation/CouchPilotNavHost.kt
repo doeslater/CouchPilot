@@ -26,6 +26,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
+import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
 
 private data class TopLevelTab(val route: Route, val label: String, val icon: ImageVector)
@@ -89,8 +90,12 @@ fun CouchPilotNavHost(
         ) {
             composable<Route.Tonight> { TonightScreen() }
             composable<Route.Discover> { DiscoverScreen() }
-            composable<Route.Onboarding> { OnboardingScreen() }
-            // Route.ShowDetail's destination arrives in roadmap Phase 6, once ShowDetailScreen exists.
+            composable<Route.Onboarding> { 
+                OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 
+            }
+            composable<Route.ShowDetail> { 
+                ShowDetailScreen(onBack = { navController.popBackStack() }) 
+            }
         }
     }
 }

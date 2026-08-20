@@ -3,7 +3,7 @@ package com.example.couchpilot.tonight.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.couchpilot.core.domain.Result
-import com.example.couchpilot.recommendation.domain.rankedByRating
+import com.example.couchpilot.recommendation.domain.RecommendationScorer
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tvmaze.domain.ScheduleItem
 import com.example.couchpilot.tvmaze.domain.TvMazeRepository
@@ -27,6 +27,7 @@ private const val DAYS_AHEAD = 7
 class TonightViewModel @Inject constructor(
     private val tvMazeRepository: TvMazeRepository,
     private val tmdbRepository: TmdbRepository,
+    private val recommendationScorer: RecommendationScorer,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<TonightUiState>(TonightUiState.Loading)
     val uiState: StateFlow<TonightUiState> = _uiState.asStateFlow()
@@ -48,7 +49,7 @@ class TonightViewModel @Inject constructor(
             _uiState.value = TonightUiState.Loading
             when (val result = tvMazeRepository.getScheduleForDate(day.apiDate)) {
                 is Result.Success -> {
-                    val schedule = result.data.rankedByRating()
+                    val schedule = result.data
                     _uiState.value = TonightUiState.Success(days, day, schedule)
                     enrichSchedule(day, schedule)
                 }
@@ -61,14 +62,18 @@ class TonightViewModel @Inject constructor(
 
     private fun enrichSchedule(day: DayOption, schedule: List<ScheduleItem>) {
         viewModelScope.launch {
-            // These are independent TMDB lookups (not TVmaze - TVmaze's rate limit doesn't apply
-            // here), so run them concurrently rather than one at a time.
             val enrichedList = coroutineScope {
                 schedule.map { item ->
                     async {
                         if (item.imdbId != null && item.posterUrl == null) {
                             when (val tmdbResult = tmdbRepository.getTvShowByImdbId(item.imdbId)) {
-                                is Result.Success -> item.copy(posterUrl = tmdbResult.data?.posterUrl)
+                                is Result.Success -> {
+                                    val show = tmdbResult.data
+                                    item.copy(
+                                        posterUrl = show?.posterUrl,
+                                        genreIds = show?.genreIds ?: emptyList(),
+                                    )
+                                }
                                 is Result.Error -> item
                             }
                         } else {
@@ -76,8 +81,17 @@ class TonightViewModel @Inject constructor(
                         }
                     }
                 }.awaitAll()
-            }.rankedByRating()
-            _uiState.value = TonightUiState.Success(days, day, enrichedList)
+            }
+            // Now that items have real genreIds (from the TMDB bridge above), re-rank with the
+            // actual preference-based scorer instead of the repository's rating-only pre-sort.
+            // score() returns 0.0 uniformly with no swipe signal yet, so rating stays the
+            // tie-breaker/fallback for cold start.
+            val userTaste = recommendationScorer.computePreferenceVector()
+            val rankedList = enrichedList.sortedWith(
+                compareByDescending<ScheduleItem> { recommendationScorer.score(it.genreIds, userTaste) }
+                    .thenByDescending { it.rating ?: 0.0 }
+            )
+            _uiState.value = TonightUiState.Success(days, day, rankedList)
         }
     }
 

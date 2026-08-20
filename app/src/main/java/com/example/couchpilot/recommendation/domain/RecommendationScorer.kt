@@ -25,7 +25,7 @@ class RecommendationScorer @Inject constructor(
                 .filter { it.isNotEmpty() }
                 .mapNotNull { it.toIntOrNull() }
                 .forEach { genreId ->
-                    weights[it] = (weights[it] ?: 0.0) + delta
+                    weights[genreId] = (weights[genreId] ?: 0.0) + delta
                 }
         }
         return PreferenceVector(weights)
