@@ -17,11 +17,12 @@ of work, and update the checkboxes below as phases land.
 ## Status
 
 - [x] **Phase 1** — Navigation shell, real screens, Baking sample + Firebase AI removed
-- [ ] Phase 2 — TVmaze integration ("What's On Tonight?" with real data)
+- [x] **Phase 2** — TVmaze integration ("What's On Tonight?" with real data)
 - [ ] Phase 3 — Room offline-first cache + Wi-Fi prefetch
 - [ ] Phase 4 — Swipe onboarding + preference storage
 - [ ] Phase 5 — Local recommendation engine (heuristic, not TFLite)
-- [ ] Phase 6 — Watch providers + honest "open the app" deep-link substitute
+- [~] Phase 6 — Watch providers landed early (Discover's filter chips); the ShowDetail screen +
+      "open app / Play Store" deep-link substitute have not
 - [ ] Phase 7 — Implicit signals, polish, tests
 
 ## Reality checks against general_idea.md (apply throughout)
@@ -29,11 +30,13 @@ of work, and update the checkboxes below as phases land.
 - **TVmaze**: real, free, no key. `GET /schedule?country=GB&date=YYYY-MM-DD` is the broadcast
   schedule endpoint (ISO code `GB`, not `UK`). It does **not** tag channels as Freeview/Freesat/Sky
   — that split has to be a hand-maintained channel-name whitelist in the app, not something the API
-  hands you. Rate limit ~20 req/10s/IP — fine interactively, but don't fan out per-show enrichment
-  calls in parallel.
+  hands you. Rate limit ~20 req/10s/IP applies to *TVmaze* calls specifically — the schedule is one
+  call per load, so this isn't a practical constraint yet.
 - **TMDB ↔ TVmaze bridge**: no shared ID. Bridge via TVmaze's `externals.imdb` →
-  `GET /find/{imdb_id}?external_source=imdb_id` on TMDB. Real and documented, but an extra
-  per-show network call that needs caching, and won't always match.
+  `GET /find/{imdb_id}?external_source=imdb_id` on TMDB (`TmdbRepository.getTvShowByImdbId()`).
+  Real and documented, but an extra per-show network call that needs caching, and won't always
+  match. These are TMDB calls, not TVmaze ones, so TVmaze's rate limit above doesn't apply to them
+  — Phase 2 runs them concurrently per schedule item rather than throttling them.
 - **TMDB watch providers**: `GET /tv/{id}/watch/providers`, region-keyed (`results.GB`). Confirmed
   via TMDB's own docs: the `link` field is a TMDB attribution page, not a deep link into the
   provider's app or content.
@@ -77,20 +80,28 @@ live TMDB data, Firebase AI gone entirely.
   `coil-network-okhttp` for poster image loading, and `androidx.compose.material:material-icons-core`
   (not pulled in transitively by material3 here) for the nav bar icons.
 
-### Phase 2 — TVmaze integration ("What's On Tonight?" with real data)
+### Phase 2 — TVmaze integration ("What's On Tonight?" with real data) ✅ done
 **Goal:** the Tonight grid shows the real UK broadcast schedule.
 
-- `tvmaze/domain/{Schedule,TvMazeRepository}.kt`, `tvmaze/data/{KtorTvMazeRemoteDataSource,
-  TvMazeRoutes,ScheduleMappers,dto/ScheduleDto}.kt`, `tvmaze/di/TvMazeModule.kt` — same package
-  convention as `tmdb/`. Calls `/schedule?country=GB&date=...`, no auth header (reuses the shared,
-  auth-free `core/di/NetworkModule` client and `core/data/SafeCall.kt` as-is).
-- A hand-maintained `FreeviewChannels` whitelist (plain `Set<String>`) filtering the raw schedule
-  client-side — document it as an ongoing maintenance cost, not a one-time list.
-- `tmdb/data/TmdbFindBySource.kt` — the IMDb-bridge call for poster/metadata enrichment, with basic
-  throttling (not parallel fan-out) given TVmaze's rate limit; UI must handle "no metadata matched,
-  title only" rather than assuming full enrichment.
-- `TonightViewModel` calls `TvMazeRepository`, filters by whitelist, enriches via the bridge where
-  it resolves.
+- The networking stack moved from Ktor to Retrofit + Gson partway through Phase 1/2 (see
+  `core/data/RetrofitFactory.kt`, `core/di/NetworkModule.kt`), so this landed as
+  `tvmaze/domain/{ScheduleItem,TvMazeRepository}.kt`, `tvmaze/data/{RetrofitTvMazeRemoteDataSource,
+  TvMazeService,TvMazeMappers,dto/ScheduleDto}.kt`, `tvmaze/di/TvMazeModule.kt` — not the
+  Ktor-named files originally sketched here, but the same package convention as `tmdb/`. Calls
+  `/schedule?country=GB&date=...` (via `Constants.DEFAULT_REGION`), no auth header.
+- `tvmaze/domain/FreeviewChannels.kt` — a hand-maintained whitelist filtering the raw schedule
+  client-side, matched by exact name or a `"<entry> "` prefix (regional variants like "BBC One
+  London") — not a raw substring `contains`, which let short entries like `"W"` match anything
+  containing the letter w. Document this list as an ongoing maintenance cost, not a one-time task.
+- `TmdbRepository.getTvShowByImdbId()` (via TMDB's `/find/{imdb_id}` endpoint) is the IMDb-bridge
+  call for poster/metadata enrichment, run concurrently per schedule item (`async`/`awaitAll` in
+  `TonightViewModel.enrichSchedule`) rather than sequentially — these are TMDB calls, not TVmaze
+  ones, so TVmaze's rate limit doesn't constrain them. UI handles "no metadata matched, title only"
+  since not every show resolves.
+- `TonightViewModel` calls `TvMazeRepository`, filters by whitelist, shows the raw schedule
+  immediately, then re-emits once enrichment completes.
+- Verified on-device: real dated schedule ("Thursday 20th August"), correct Freeview-only channels
+  (ITV1, BBC One, Channel 4, E4), posters loading, no crashes.
 
 ### Phase 3 — Room offline-first cache + Wi-Fi prefetch
 **Goal:** the app works offline, per general_idea.md's "Smart Cache."
@@ -139,14 +150,18 @@ live TMDB data, Firebase AI gone entirely.
 - Set expectations explicitly (in code comments and to yourself): ~19 TMDB TV genres makes this a
   coarse signal, good for "roughly matches what you swiped right on," not strong personalization.
 
-### Phase 6 — Watch providers + honest "open the app" deep-link substitute
+### Phase 6 — Watch providers + honest "open the app" deep-link substitute (partially done)
 **Goal:** ship the UK-streaming-availability idea, scoped to what's actually implementable.
 
-- `TmdbRepository.getWatchProviders(tvId): Result<WatchProviders, DataError>`,
-  `tmdb/data/dto/WatchProvidersDto.kt`, `GET /tv/{id}/watch/providers`, GB-only domain model.
-- `showdetail/presentation/{ShowDetailScreen,ShowDetailViewModel,ShowDetailUiState}.kt` — provider
-  logos + "Open" button per provider. This is also where `Route.ShowDetail`'s NavHost destination
-  finally gets wired in.
+- **Already landed, ahead of schedule**, during the Discover work: `TmdbRepository.getWatchProviders()`
+  / `getTrendingTvShows(providerId)`, `GET /tv/{id}/watch/providers` + `/discover/tv`, region
+  `GB` (via `Constants.DEFAULT_REGION`, fixed from an initial `"US"` default caught in review) — as
+  filter chips on `DiscoverScreen`, not yet as anything on a show-detail screen. Tapping a poster
+  currently just opens the show's TMDB web page in a browser (`DiscoverScreen`'s click handler) —
+  that's a stand-in for real detail navigation, not this phase's deep-link substitute.
+- **Still to do:** `showdetail/presentation/{ShowDetailScreen,ShowDetailViewModel,ShowDetailUiState}.kt`
+  — provider logos + "Open" button per provider. This is where `Route.ShowDetail`'s NavHost
+  destination finally gets wired in (replacing the browser-link stand-in above).
 - `showdetail/data/InstalledAppLauncher.kt` — `PackageManager` installed-check + generic app-open
   `Intent`, falling back to `market://details?id=...` when not installed. **Verify every provider
   package name (BBC iPlayer, ITVX, All4, My5, Netflix) against a real installed APK on a device as

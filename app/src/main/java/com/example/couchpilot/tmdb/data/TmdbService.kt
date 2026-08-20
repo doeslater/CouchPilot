@@ -30,4 +30,11 @@ interface TmdbService {
         @Query("with_watch_monetization_types") monetization: String = "flatrate",
         @Header("Authorization") authHeader: String
     ): Response<TrendingTvShowsResponseDto>
+
+    @GET("find/{external_id}")
+    suspend fun findByExternalId(
+        @Path("external_id") externalId: String,
+        @Query("external_source") externalSource: String = "imdb_id",
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.FindByIdResponseDto>
 }
