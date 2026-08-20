@@ -29,6 +29,12 @@ class DefaultTmdbRepository @Inject constructor(
             }
     }
 
+    override suspend fun getTvShowByImdbId(imdbId: String): Result<TvShow?, DataError> {
+        return remoteDataSource.findByExternalId(imdbId).map { dto ->
+            dto.tvResults.firstOrNull()?.toTvShow()
+        }
+    }
+
     private fun WatchProvider.priorityRank(): Int {
         return when {
             name.contains("BBC", ignoreCase = true) -> 0

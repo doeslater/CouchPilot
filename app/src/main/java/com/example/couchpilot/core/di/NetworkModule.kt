@@ -7,15 +7,11 @@ import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 /**
- * Provides a single, shared [Retrofit] instance.
- * Auth headers for specific APIs (like TMDB) are handled in their respective data sources
- * or specific interceptors if they were truly global, but for now we follow the existing
- * pattern of per-request auth in the data source.
+ * Provides shared network components.
+ * Feature-specific base URLs are handled in their respective Dagger modules.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -35,13 +31,4 @@ object NetworkModule {
             .build()
     }
 
-    @Provides
-    @Singleton
-    fun provideRetrofit(okHttpClient: OkHttpClient): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl("https://api.themoviedb.org/3/") // Base URL is required
-            .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-    }
 }

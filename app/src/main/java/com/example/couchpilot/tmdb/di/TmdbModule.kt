@@ -1,5 +1,6 @@
 package com.example.couchpilot.tmdb.di
 
+import com.example.couchpilot.core.data.RetrofitFactory
 import com.example.couchpilot.tmdb.data.DefaultTmdbRepository
 import com.example.couchpilot.tmdb.data.TmdbService
 import com.example.couchpilot.tmdb.domain.TmdbRepository
@@ -8,7 +9,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
-import retrofit2.Retrofit
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 @Module
@@ -22,8 +23,9 @@ abstract class TmdbModule {
     companion object {
         @Provides
         @Singleton
-        fun provideTmdbService(retrofit: Retrofit): TmdbService {
-            return retrofit.create(TmdbService::class.java)
+        fun provideTmdbService(okHttpClient: OkHttpClient): TmdbService {
+            return RetrofitFactory.create(okHttpClient, "https://api.themoviedb.org/3/")
+                .create(TmdbService::class.java)
         }
     }
 }

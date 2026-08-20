@@ -1,6 +1,9 @@
 package com.example.couchpilot.tonight.presentation
 
-/** Placeholder until roadmap Phase 2 wires in the real TVmaze UK schedule. */
+import com.example.couchpilot.tvmaze.domain.ScheduleItem
+
 sealed interface TonightUiState {
-    data object NotYetImplemented : TonightUiState
+    data object Loading : TonightUiState
+    data class Success(val schedule: List<ScheduleItem>) : TonightUiState
+    data class Error(val message: String) : TonightUiState
 }
