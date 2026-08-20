@@ -21,6 +21,8 @@ of work, and update the checkboxes below as phases land.
       full "This Week" day-selector, not just today (see Phase 2's writeup)
 - [x] **Phase 3** — Room offline-first cache + Wi-Fi prefetch
 - [x] **Phase 4** — Swipe onboarding + preference storage
+- [ ] allow user to skip onboarding and view results without recommendations. 
+-［ ］have a user screen with analyse profile choices.
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
 - [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
