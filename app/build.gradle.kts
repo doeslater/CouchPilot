@@ -1,7 +1,19 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.gms.google.services)
+}
+
+// Secrets (API keys) live in secrets.properties at the repo root — gitignored,
+// never committed. See secrets.properties.example for the expected keys.
+val secretsProperties = Properties().apply {
+    val secretsFile = rootProject.file("secrets.properties")
+    if (secretsFile.exists()) {
+        load(FileInputStream(secretsFile))
+    }
 }
 
 android {
@@ -18,6 +30,17 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "TMDB_API_KEY",
+            "\"${secretsProperties.getProperty("tmdbApiKey", "")}\""
+        )
+        buildConfigField(
+            "String",
+            "TMDB_READ_ACCESS_TOKEN",
+            "\"${secretsProperties.getProperty("tmdbReadAccessToken", "")}\""
+        )
     }
 
     buildTypes {
@@ -33,6 +56,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
