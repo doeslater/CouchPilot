@@ -72,6 +72,7 @@ class TonightViewModel @Inject constructor(
                                     item.copy(
                                         posterUrl = show?.posterUrl,
                                         genreIds = show?.genreIds ?: emptyList(),
+                                        tmdbId = show?.id,
                                     )
                                 }
                                 is Result.Error -> item

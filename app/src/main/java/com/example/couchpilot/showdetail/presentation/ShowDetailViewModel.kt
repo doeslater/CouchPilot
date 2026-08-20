@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.presentation.navigation.Route
+import com.example.couchpilot.showdetail.data.AppLauncher
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class ShowDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val tmdbRepository: TmdbRepository
+    private val tmdbRepository: TmdbRepository,
+    private val appLauncher: AppLauncher
 ) : ViewModel() {
     private val showId: Int = savedStateHandle.toRoute<Route.ShowDetail>().id
 
@@ -28,21 +30,30 @@ class ShowDetailViewModel @Inject constructor(
         loadShowDetails()
     }
 
+    fun onProviderClick(context: android.content.Context, providerName: String) {
+        appLauncher.launchProviderApp(context, providerName)
+    }
+
     private fun loadShowDetails() {
         viewModelScope.launch {
             _uiState.value = ShowDetailUiState.Loading
-            when (val result = tmdbRepository.getTvShowById(showId)) {
-                is Result.Success -> {
-                    val show = result.data
-                    if (show != null) {
-                        _uiState.value = ShowDetailUiState.Success(show)
-                    } else {
-                        _uiState.value = ShowDetailUiState.Error("Show not found")
-                    }
+            
+            val showResult = tmdbRepository.getTvShowById(showId)
+            val providerResult = tmdbRepository.getWatchProvidersForShow(showId)
+
+            if (showResult is Result.Success) {
+                val show = showResult.data
+                if (show != null) {
+                    val providers = if (providerResult is Result.Success) {
+                        providerResult.data
+                    } else emptyList()
+                    
+                    _uiState.value = ShowDetailUiState.Success(show, providers)
+                } else {
+                    _uiState.value = ShowDetailUiState.Error("Show not found")
                 }
-                is Result.Error -> {
-                    _uiState.value = ShowDetailUiState.Error("Failed to load details")
-                }
+            } else {
+                _uiState.value = ShowDetailUiState.Error("Failed to load details")
             }
         }
     }

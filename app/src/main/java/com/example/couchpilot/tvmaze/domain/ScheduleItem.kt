@@ -19,4 +19,8 @@ data class ScheduleItem(
     // genre IDs from swipe history). Always empty until TonightViewModel.enrichSchedule()
     // bridges this show to TMDB and copies its genreIds in.
     val genreIds: List<Int> = emptyList(),
+    // The TMDB show id (distinct from showId, which is TVmaze's own). Always null until
+    // TonightViewModel.enrichSchedule() bridges this show to TMDB - needed to navigate to
+    // Route.ShowDetail, which takes a TMDB id.
+    val tmdbId: Int? = null,
 )

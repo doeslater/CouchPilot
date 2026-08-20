@@ -1,5 +1,6 @@
 package com.example.couchpilot.tmdb.data
 
+import com.example.couchpilot.Constants.DEFAULT_REGION
 import com.example.couchpilot.core.domain.DataError
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.core.domain.map
@@ -67,7 +68,29 @@ class DefaultTmdbRepository @Inject constructor(
 
     override suspend fun getTvShowById(id: Int): Result<TvShow?, DataError> {
         val cached = tvShowDao.getTvShowById(id)
-        return Result.Success(cached?.toTvShow())
+        if (cached != null) {
+            return Result.Success(cached.toTvShow())
+        }
+
+        // Not every show reaches here via getTrendingTvShows() (e.g. ones bridged in from
+        // Tonight/TVmaze via getTvShowByImdbId() are never inserted into tvShowDao), so a
+        // cache miss isn't "not found" - fetch it directly and cache it for next time.
+        return remoteDataSource.getTvShowDetails(id)
+            .onSuccess { dto -> tvShowDao.insertTvShows(listOf(dto.toEntity())) }
+            .map { dto -> dto.toTvShow() }
+    }
+
+    override suspend fun getWatchProvidersForShow(tvId: Int): Result<List<WatchProvider>, DataError> {
+        return remoteDataSource.getWatchProvidersForShow(tvId).map { dto ->
+            val regionData = dto.results[DEFAULT_REGION]
+            val allProviders = (regionData?.flatrate ?: emptyList()) + 
+                               (regionData?.buy ?: emptyList()) + 
+                               (regionData?.rent ?: emptyList())
+            
+            allProviders
+                .distinctBy { it.providerId }
+                .map { it.toWatchProvider() }
+        }
     }
 
     private fun WatchProvider.priorityRank(): Int {

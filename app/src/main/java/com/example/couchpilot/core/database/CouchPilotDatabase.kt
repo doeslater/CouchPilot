@@ -15,7 +15,7 @@ import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
         ScheduleItemEntity::class,
         SwipeEventEntity::class
     ],
-    version = 4, // v4: added ScheduleItemEntity.genreIds
+    version = 5, // v5: added ScheduleItemEntity.tmdbId
     exportSchema = false
 )
 abstract class CouchPilotDatabase : RoomDatabase() {

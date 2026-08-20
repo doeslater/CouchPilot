@@ -88,8 +88,12 @@ fun CouchPilotNavHost(
             startDestination = Route.Tonight,
             modifier = Modifier.padding(innerPadding),
         ) {
-            composable<Route.Tonight> { TonightScreen() }
-            composable<Route.Discover> { DiscoverScreen() }
+            composable<Route.Tonight> {
+                TonightScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
+            }
+            composable<Route.Discover> {
+                DiscoverScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
+            }
             composable<Route.Onboarding> { 
                 OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 
             }

@@ -14,4 +14,5 @@ interface TmdbRepository {
     suspend fun getWatchProviders(): Result<List<WatchProvider>, DataError>
     suspend fun getTvShowByImdbId(imdbId: String): Result<TvShow?, DataError>
     suspend fun getTvShowById(id: Int): Result<TvShow?, DataError>
+    suspend fun getWatchProvidersForShow(tvId: Int): Result<List<WatchProvider>, DataError>
 }

@@ -53,4 +53,21 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun getWatchProvidersForShow(tvId: Int): Result<com.example.couchpilot.tmdb.data.dto.ShowWatchProvidersResponseDto, DataError.Network> {
+        return safeCall {
+            tmdbService.getWatchProvidersForShow(
+                seriesId = tvId,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
+
+    suspend fun getTvShowDetails(tvId: Int): Result<com.example.couchpilot.tmdb.data.dto.TvShowDetailDto, DataError.Network> {
+        return safeCall {
+            tmdbService.getTvShowDetails(
+                seriesId = tvId,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
 }

@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -39,10 +38,10 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 
 @Composable
 fun DiscoverScreen(
+    onShowClick: (Int) -> Unit,
     viewModel: DiscoverViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val uriHandler = LocalUriHandler.current
 
     Box(modifier = Modifier.fillMaxSize()) {
         when (val state = uiState) {
@@ -61,9 +60,7 @@ fun DiscoverScreen(
                 )
                 TrendingGrid(
                     shows = state.shows,
-                    onShowClick = { show ->
-                        uriHandler.openUri("https://www.themoviedb.org/tv/${show.id}")
-                    }
+                    onShowClick = { show -> onShowClick(show.id) }
                 )
             }
         }

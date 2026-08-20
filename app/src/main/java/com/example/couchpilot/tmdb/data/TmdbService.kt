@@ -37,4 +37,16 @@ interface TmdbService {
         @Query("external_source") externalSource: String = "imdb_id",
         @Header("Authorization") authHeader: String
     ): Response<com.example.couchpilot.tmdb.data.dto.FindByIdResponseDto>
+
+    @GET("tv/{series_id}/watch/providers")
+    suspend fun getWatchProvidersForShow(
+        @Path("series_id") seriesId: Int,
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.ShowWatchProvidersResponseDto>
+
+    @GET("tv/{series_id}")
+    suspend fun getTvShowDetails(
+        @Path("series_id") seriesId: Int,
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.TvShowDetailDto>
 }

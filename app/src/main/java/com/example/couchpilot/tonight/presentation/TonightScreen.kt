@@ -1,5 +1,6 @@
 package com.example.couchpilot.tonight.presentation
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import com.example.couchpilot.tvmaze.domain.ScheduleItem
 
 @Composable
 fun TonightScreen(
+    onShowClick: (Int) -> Unit,
     viewModel: TonightViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,7 +62,10 @@ fun TonightScreen(
                         )
                     }
                 } else {
-                    ScheduleList(state.schedule)
+                    ScheduleList(
+                        schedule = state.schedule,
+                        onShowClick = onShowClick
+                    )
                 }
             }
         }
@@ -88,22 +93,35 @@ private fun DaySelector(
 }
 
 @Composable
-private fun ScheduleList(schedule: List<ScheduleItem>) {
+private fun ScheduleList(
+    schedule: List<ScheduleItem>,
+    onShowClick: (Int) -> Unit
+) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(schedule, key = { it.id }) { item ->
-            ScheduleRow(item)
+            ScheduleRow(
+                item = item,
+                // Only clickable once enrichment has resolved a real TMDB id - not every show
+                // matches the TVmaze-to-TMDB bridge (see TonightViewModel.enrichSchedule).
+                modifier = Modifier.clickable(enabled = item.tmdbId != null) {
+                    item.tmdbId?.let(onShowClick)
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun ScheduleRow(item: ScheduleItem) {
+private fun ScheduleRow(
+    item: ScheduleItem,
+    modifier: Modifier = Modifier
+) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(

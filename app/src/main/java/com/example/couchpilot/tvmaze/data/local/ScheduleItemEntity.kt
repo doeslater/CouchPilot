@@ -19,4 +19,5 @@ data class ScheduleItemEntity(
     val rating: Double? = null,
     // Comma-joined, same convention as TvShowEntity.genreIds - no List<Int> TypeConverter yet.
     val genreIds: String = "",
+    val tmdbId: Int? = null,
 )
