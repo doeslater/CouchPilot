@@ -8,4 +8,5 @@ data class TvShow(
     val posterUrl: String?,
     val voteAverage: Double,
     val firstAirDate: String?,
+    val genreIds: List<Int> = emptyList(),
 )

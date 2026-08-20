@@ -14,6 +14,7 @@ fun TvShowDto.toTvShow(): TvShow = TvShow(
     posterUrl = TmdbImages.posterUrl(posterPath),
     voteAverage = voteAverage,
     firstAirDate = firstAirDate,
+    genreIds = genreIds
 )
 
 fun TvShowDto.toEntity(): TvShowEntity = TvShowEntity(
@@ -22,7 +23,8 @@ fun TvShowDto.toEntity(): TvShowEntity = TvShowEntity(
     overview = overview,
     posterUrl = TmdbImages.posterUrl(posterPath),
     voteAverage = voteAverage,
-    firstAirDate = firstAirDate
+    firstAirDate = firstAirDate,
+    genreIds = genreIds.joinToString(",")
 )
 
 fun TvShowEntity.toTvShow(): TvShow = TvShow(
@@ -31,7 +33,8 @@ fun TvShowEntity.toTvShow(): TvShow = TvShow(
     overview = overview,
     posterUrl = posterUrl,
     voteAverage = voteAverage,
-    firstAirDate = firstAirDate
+    firstAirDate = firstAirDate,
+    genreIds = if (genreIds.isBlank()) emptyList() else genreIds.split(",").map { it.toInt() }
 )
 
 fun WatchProviderDto.toWatchProvider(): WatchProvider = WatchProvider(

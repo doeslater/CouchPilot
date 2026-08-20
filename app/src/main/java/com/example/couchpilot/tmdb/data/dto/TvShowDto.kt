@@ -13,4 +13,5 @@ data class TvShowDto(
     @SerializedName("poster_path") val posterPath: String? = null,
     @SerializedName("vote_average") val voteAverage: Double = 0.0,
     @SerializedName("first_air_date") val firstAirDate: String? = null,
+    @SerializedName("genre_ids") val genreIds: List<Int> = emptyList(),
 )

@@ -35,9 +35,12 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
   lives in `ui/theme/` (`Color.kt`, `Theme.kt`, `Type.kt`), applied at the root via `CouchPilotTheme` in
   `MainActivity`.
 - **State pattern:** one `ViewModel` per screen exposing a `StateFlow<UiState>` where `UiState` is a sealed
-  interface (`Initial` / `Loading` / `Success` / `Error`), collected in the Composable with `collectAsState()`.
-  Follow this same shape (`XxxViewModel` + `XxxUiState` sealed interface) for new screens rather than introducing
-  a different state-management approach.
+  interface, collected in the Composable with `collectAsState()`. Every current screen's ViewModel
+  self-triggers its load in `init {}`, so `Loading` doubles as the initial state and there's no separate
+  `Initial` variant sitting unreachable (`DiscoverUiState`/`TonightUiState`/`OnboardingUiState` are all just
+  `Loading` / `Success` / `Error`) — only add an `Initial` state for a screen that genuinely waits for a user
+  action before starting its first load. Follow this same shape (`XxxViewModel` + `XxxUiState` sealed
+  interface) for new screens rather than introducing a different state-management approach.
 - **No Firebase.** Firebase AI Logic and its `google-services.json` requirement were removed in roadmap
   Phase 1 along with the Baking sample — don't re-add them without a real reason; nothing in `general_idea.md`
   calls for an AI model.

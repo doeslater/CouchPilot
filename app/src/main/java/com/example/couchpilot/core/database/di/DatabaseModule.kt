@@ -23,7 +23,7 @@ object DatabaseModule {
             context,
             CouchPilotDatabase::class.java,
             CouchPilotDatabase.DATABASE_NAME
-        ).build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides
@@ -36,5 +36,11 @@ object DatabaseModule {
     @Singleton
     fun provideScheduleDao(db: CouchPilotDatabase): ScheduleDao {
         return db.scheduleDao
+    }
+
+    @Provides
+    @Singleton
+    fun provideSwipeEventDao(db: CouchPilotDatabase): com.example.couchpilot.onboarding.data.local.SwipeEventDao {
+        return db.swipeEventDao
     }
 }

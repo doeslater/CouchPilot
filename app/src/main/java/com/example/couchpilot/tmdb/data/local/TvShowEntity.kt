@@ -11,5 +11,7 @@ data class TvShowEntity(
     val posterUrl: String?,
     val voteAverage: Double,
     val firstAirDate: String?,
-    val lastUpdated: Long = System.currentTimeMillis()
+    val lastUpdated: Long = System.currentTimeMillis(),
+    // Comma-joined, same convention as SwipeEventEntity.genreIds - no List<Int> TypeConverter yet.
+    val genreIds: String = "",
 )
