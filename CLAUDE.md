@@ -53,14 +53,40 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
     `buildConfigField` (`buildFeatures.buildConfig = true`), so app code reads them as
     `BuildConfig.TMDB_API_KEY` / `BuildConfig.TMDB_READ_ACCESS_TOKEN` — never read `secrets.properties`
     directly from Kotlin/Java code, and never log/print those `BuildConfig` values. If `secrets.properties`
-    is missing, the build still succeeds with empty-string values (TMDB calls would just fail at runtime).
-    No repository/networking code consumes these yet — TMDB isn't actually called anywhere in the app.
+    is missing, the build still succeeds with empty-string values (TMDB calls fail at runtime instead).
 - **minSdk 24 / targetSdk 37 / compileSdk 37**, Kotlin `2.2.10`, Java 11 compatibility, AGP `9.3.1`. Dependency
   versions are centralized in `gradle/libs.versions.toml` (version catalog) — add new dependencies there rather
   than hardcoding versions in `app/build.gradle.kts`.
 - **Dependency injection:** Hilt (KSP-based annotation processing, not kapt). `CouchPilotApp`
   (`@HiltAndroidApp`) is registered as the `Application` class in the manifest; `MainActivity` is
   `@AndroidEntryPoint`; ViewModels are `@HiltViewModel` with `@Inject constructor(...)` and obtained in
-  Composables via `hiltViewModel()` (not the plain `viewModel()` factory). Follow this same pattern for new
-  ViewModels/screens. No `@Module`/`@Provides` bindings exist yet — add them once there's an actual dependency
-  (e.g. a TMDB repository) that needs providing rather than direct `@Inject constructor` construction.
+  Composables via `hiltViewModel()` — note the import is `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`,
+  not the `androidx.hilt.navigation.compose` one (deprecated as of `hilt-navigation-compose` 1.3.0). Follow this
+  same pattern for new ViewModels/screens.
+- **Data layer / networking:** domain and data are split by package, not by Gradle module (single-module
+  project — see "Data Source vs Repository" below for when to promote this to real modules).
+  - `core/domain/Result.kt` + `DataError.kt` — a generic `Result<D, E : Error>` used everywhere a function can
+    succeed or fail with a typed error (not exceptions), plus the shared `DataError.Network` / `DataError.Local`
+    error enums. Feature-specific errors implement `Error` directly instead of reusing `DataError`.
+  - `core/data/SafeCall.kt` — `HttpClient.get<T>(url, queryParameters, block)` and `safeCall`/`responseToResult`
+    turn a Ktor call + its exceptions into a typed `Result<T, DataError.Network>`. Reuse this for any new remote
+    call rather than hand-rolling try/catch around Ktor.
+  - `core/di/NetworkModule.kt` — provides the single shared `HttpClient` (JSON + logging only). Deliberately
+    carries **no** auth — an API-specific token (like TMDB's) is added per-request in that API's own data source,
+    not as a `defaultRequest` header on this shared client, or it would leak to whatever other API gets added
+    next (e.g. TVmaze, per `general_idea.md`).
+  - `tmdb/domain/{TvShow,TmdbRepository}.kt` — the domain model and repository interface; `tmdb/data/` — DTOs
+    (`dto/`), `TmdbRoutes`/`TmdbImages` (endpoint + image URL builders — not secret, so not in `BuildConfig`),
+    `KtorTmdbRemoteDataSource` (adds the `Authorization: Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}` header),
+    `TvShowMappers.kt` (DTO → domain), `DefaultTmdbRepository`; `tmdb/di/TmdbModule.kt` binds the interface via
+    `@Binds`. `TmdbRepository` is named/typed as a repository (not a data source) even though there's only one
+    data source behind it today, because it's the seam a local Room cache would slot into later without
+    presentation code changing — see general_idea.md's offline-first "Smart Cache" idea.
+  - Only `getTrendingTvShows()` exists so far — verified against the real TMDB API on a device, not just
+    compiled. Nothing in the UI calls it yet; `BakingScreen`/`BakingViewModel` are still the only visible screen.
+  - **Data Source vs Repository:** a class that talks to one data source (one remote API, one DB) is a
+    `*DataSource`; only a class that itself coordinates multiple data sources (e.g. remote + local cache) should
+    be called a `*Repository`. If this app grows past a couple of features, promote `core/` and each feature
+    package to real Gradle modules (`core:domain`, `core:data`, `feature:tmdb:domain`, `feature:tmdb:data`, ...)
+    so `presentation` can't accidentally depend on `data` directly — the interfaces in `domain/` already exist
+    for exactly that boundary, this would just make it enforced by the build graph instead of convention.
