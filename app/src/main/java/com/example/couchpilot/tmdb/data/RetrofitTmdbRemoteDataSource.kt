@@ -21,7 +21,7 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
         }
     }
 
-    suspend fun getWatchProviders(region: String = "GB"): Result<WatchProvidersResponseDto, DataError.Network> {
+    suspend fun getWatchProviders(region: String = DEFAULT_REGION): Result<WatchProvidersResponseDto, DataError.Network> {
         return safeCall {
             tmdbService.getWatchProviders(
                 region = region,
@@ -31,7 +31,7 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
     }
 
     suspend fun discoverTv(
-        region: String = "GB",
+        region: String = DEFAULT_REGION,
         providerId: Int
     ): Result<TrendingTvShowsResponseDto, DataError.Network> {
         return safeCall {
@@ -41,5 +41,9 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
                 authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
             )
         }
+    }
+
+    companion object {
+        private const val DEFAULT_REGION = "GB"
     }
 }

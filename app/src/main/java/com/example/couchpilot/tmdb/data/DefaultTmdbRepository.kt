@@ -24,8 +24,20 @@ class DefaultTmdbRepository @Inject constructor(
         return remoteDataSource.getWatchProviders()
             .map { dto ->
                 dto.results
-                    .sortedBy { it.displayPriority }
                     .map { it.toWatchProvider() }
+                    .sortedWith(compareBy<WatchProvider> { it.priorityRank() }.thenBy { it.name })
             }
+    }
+
+    private fun WatchProvider.priorityRank(): Int {
+        return when {
+            name.contains("BBC", ignoreCase = true) -> 0
+            name == "ITVX" -> 1
+            name.contains("Channel 4", ignoreCase = true) || name.contains("All 4", ignoreCase = true) -> 2
+            name.contains("My5", ignoreCase = true) || name.contains("Channel 5", ignoreCase = true) -> 3
+            name == "U" || name.contains("UKTV", ignoreCase = true) -> 4
+            name.contains("Sky", ignoreCase = true) -> 5
+            else -> 6
+        }
     }
 }
