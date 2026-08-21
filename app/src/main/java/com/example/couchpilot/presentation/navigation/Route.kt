@@ -19,4 +19,8 @@ sealed interface Route {
     /** Destination arrives once ShowDetailScreen exists (roadmap Phase 6). */
     @Serializable
     data class ShowDetail(val id: Int) : Route
+
+    /** Detail-style screen reached from Settings, not a bottom-nav tab. */
+    @Serializable
+    data object Profile : Route
 }

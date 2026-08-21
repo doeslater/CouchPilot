@@ -66,6 +66,15 @@ class OnboardingViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Bails out of the swipe deck early with no preference signal recorded — Tonight/Discover
+     * fall back to their cold-start (rating-only) ordering, same as a freshly-onboarded user who
+     * swiped on nothing overlapping the current lists (see RecommendationScorer/Phase 5).
+     */
+    fun skipOnboarding() {
+        completeOnboarding()
+    }
+
     private fun completeOnboarding() {
         viewModelScope.launch {
             preferencesRepository.setOnboardingCompleted(true)

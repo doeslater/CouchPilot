@@ -2,6 +2,7 @@ package com.example.couchpilot.settings.presentation
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.couchpilot.core.data.PreferencesRepository
 import com.example.couchpilot.core.domain.LocalDataManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val localDataManager: LocalDataManager
+    private val localDataManager: LocalDataManager,
+    private val preferencesRepository: PreferencesRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
@@ -33,5 +35,17 @@ class SettingsViewModel @Inject constructor(
 
     fun onClearHandled() {
         _uiState.update { it.copy(didClear = false) }
+    }
+
+    /**
+     * Resets just the onboarding flag - unlike [clearLocalData], swipe history/cache are left
+     * alone. CouchPilotNavHost already reacts to hasCompletedOnboarding flipping to false, so no
+     * navigation call is needed here. Covers a user who skipped onboarding (or wants to redo it)
+     * and now wants to go back through the swipe deck to build a real taste profile.
+     */
+    fun retakeOnboarding() {
+        viewModelScope.launch {
+            preferencesRepository.setOnboardingCompleted(false)
+        }
     }
 }

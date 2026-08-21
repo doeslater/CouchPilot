@@ -23,6 +23,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -142,6 +143,15 @@ fun OnboardingScreen(
                         }
                     }
                 }
+            }
+        }
+
+        if (uiState is OnboardingUiState.Success && !(uiState as OnboardingUiState.Success).isFinished) {
+            IconButton(
+                onClick = { viewModel.skipOnboarding() },
+                modifier = Modifier.align(Alignment.TopEnd)
+            ) {
+                Icon(Icons.Default.Close, contentDescription = "Skip onboarding")
             }
         }
     }

@@ -52,4 +52,12 @@ class OnboardingViewModelTest {
         assertTrue(state.isFinished)
         coVerify { preferencesRepository.setOnboardingCompleted(true) }
     }
+
+    @Test
+    fun `skipOnboarding completes onboarding without recording any swipe event`() {
+        viewModel.skipOnboarding()
+
+        coVerify { preferencesRepository.setOnboardingCompleted(true) }
+        coVerify(exactly = 0) { swipeEventDao.insertSwipeEvent(any()) }
+    }
 }

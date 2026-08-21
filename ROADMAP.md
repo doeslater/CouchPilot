@@ -22,9 +22,47 @@ of work, and update the checkboxes below as phases land.
 - [x] **Phase 3** — Room offline-first cache + Wi-Fi prefetch
 - [x] **Phase 4** — Swipe onboarding + preference storage
 
-- [ ] allow user to skip onboarding and view results without recommendations.
+- [x] allow user to skip onboarding and view results without recommendations. A close (✕) icon
+      button, top-end of `OnboardingScreen`, appears whenever the deck isn't finished and calls
+      `OnboardingViewModel.skipOnboarding()` — sets `onboarding_completed` via
+      `PreferencesRepository` (same call `completeOnboarding()` makes after a full swipe deck) with
+      **no** `SwipeEventDao` insert, so Tonight/Discover land on the same rating-only cold-start
+      ordering as a user who swiped on nothing overlapping their current lists (see Phase 5's
+      `RecommendationScorer` cold-start note) — "results without recommendations" in practice means
+      "results, ranked by rating instead of taste," since there's no unranked mode to fall back to.
+      Covered by `OnboardingViewModelTest`'s `skipOnboarding completes onboarding without recording
+      any swipe event`. Verified: `./gradlew testDebugUnitTest` and `assembleDebug` both clean.
+      Follow-up: a skipped user needs a way back into the deck too, so `SettingsScreen` gained a
+      "Retake taste swipes" `OutlinedButton` above the existing "Clear local data" one, wired to
+      `SettingsViewModel.retakeOnboarding()` — resets just the `PreferencesRepository`
+      `onboarding_completed` flag via `setOnboardingCompleted(false)`, deliberately *not* routing
+      through `LocalDataManager.clearAllLocalData()`, so swipe history/cache survive a retake and
+      only get overwritten by whatever new swipes the user makes this time. `CouchPilotNavHost`
+      already reacts to the flag flipping false, so no navigation call was needed here, same as the
+      existing clear-data path. New `SettingsViewModelTest` (this feature had no test file before)
+      covers both `clearLocalData` and `retakeOnboarding`. Verified:
+      `./gradlew assembleDebug testDebugUnitTest` clean.
 
--［ ］have a user screen with analyse profile choices.
+- [x] have a user screen with analyse profile choices. `profile/presentation/{ProfileScreen,
+      ProfileViewModel,ProfileUiState}.kt` — a detail-style screen (own `Route.Profile`, no
+      bottom-nav tab, entered via a new "View your taste profile" button on `SettingsScreen`)
+      surfacing the same `PreferenceVector` `RecommendationScorer` already builds internally for
+      Tonight/Discover ranking, which until now only ever acted behind the scenes — this is the
+      first place general_idea.md's "Privacy-Preserving AI Sync" becomes visible to the user
+      instead of just powering ranking silently. Shows total signals recorded (liked/disliked
+      counts, from `SwipeEventDao`) plus a per-genre affinity list (name + signed weight + a
+      colored bar sized relative to the largest-magnitude genre), sorted strongest-liked to
+      strongest-disliked. New `recommendation/domain/TmdbTvGenres.kt` is a hand-maintained TMDB TV
+      genre id->name map (`GET /genre/tv/list`, a small fixed reference list — not worth a network
+      call, same "hand-maintained reference list" pattern as `tvmaze/domain/FreeviewChannels.kt`)
+      to make the vector's integer genre-id keys human-readable; falls back to `"Genre #<id>"` for
+      any id not in the list. Handles the empty case (no swipe events yet, e.g. a user who used
+      the new skip-onboarding path) with a plain explanatory message instead of an empty list.
+      New `ProfileViewModelTest` covers both the empty state and the summarize/name/sort path.
+      Verified: `./gradlew assembleDebug testDebugUnitTest` clean; `./gradlew lint` reproduces one
+      pre-existing, unrelated failure (`RemoveWorkManagerInitializer` on `AndroidManifest.xml`,
+      confirmed via `git stash` to already fail identically on a clean checkout) — not touched by
+      this change, not yet fixed.
 
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)

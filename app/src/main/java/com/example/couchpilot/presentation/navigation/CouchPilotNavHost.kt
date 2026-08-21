@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
+import com.example.couchpilot.profile.presentation.ProfileScreen
 import com.example.couchpilot.settings.presentation.SettingsScreen
 import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
@@ -98,7 +99,10 @@ fun CouchPilotNavHost(
                 DiscoverScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
             }
             composable<Route.Settings> {
-                SettingsScreen()
+                SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })
+            }
+            composable<Route.Profile> {
+                ProfileScreen(onBack = { navController.popBackStack() })
             }
             composable<Route.Onboarding> {
                 OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 
