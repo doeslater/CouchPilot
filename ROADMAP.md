@@ -102,7 +102,49 @@ of work, and update the checkboxes below as phases land.
       next index without recording any swipe event`) covers it. Verified: full unit suite green,
       on-device confirmed the button appears, advances the deck, and still triggers completion on
       the last card.
-
+- [x] **Watch Provider Filtering → ShowDetailScreen chip-origin CTA**. Discover's filter chips
+      were already real TMDB GB watch-providers (not a hardcoded UK list, just re-sorted by
+      `DefaultTmdbRepository.priorityRank()` to favor BBC/ITVX/Channel4/My5/UKTV), and
+      `ShowDetailScreen` already listed every TMDB-returned provider generically — but tapping a
+      chip on Discover and landing on a show's detail screen carried no memory of *which* chip
+      got you there. Scope agreed after discussion: when reached via a specific chip (not "All"),
+      `ShowDetailScreen` now shows a primary CTA above the existing generic "Available on" list —
+      *"Search for this show on [Provider]"* — that always opens a website search for the show
+      name, never the generic install-check/app-open path (`AppLauncher.launchProviderApp`)
+      the rest of the screen still uses, since opening the app only ever lands on its home
+      screen, not the show (no public deep-link contract exists, per this doc's own reality
+      check). Landed as:
+      - `Route.ShowDetail` gained `originProviderName: String? = null`; `DiscoverScreen`'s
+        `onShowClick` now passes `(id, originProviderName)` (the selected chip's provider name,
+        null for "All"); threaded through `CouchPilotNavHost` and `ShowDetailViewModel`'s
+        existing internal-constructor/`SavedStateHandle` split.
+      - `AppLauncher` gained `openProviderWebsite()` (website-search-or-fallback only, skips the
+        installed-app branch) and `hasWebsiteSearch()`, sharing URL-building with the existing
+        `launchProviderApp()` via a new private `resolveSearchOrFallbackUrl()` helper — no
+        behavior change to the pre-existing generic "Open" buttons.
+      - `ShowDetailUiState.Success.originProviderName` is only ever set when
+        `AppLauncher.hasWebsiteSearch(name)` is true, so an unmapped provider never renders a CTA
+        that would just silently no-op when tapped.
+      - **UKTV decision**: in scope, but website-search-only, deliberately no
+        `providerPackageMap` entry — confirmed via web search that UKTV's real current service
+        is branded **"U"** (u.co.uk, rebranded from "UKTV Play" in 2024), matching
+        `priorityRank()`'s existing `"U"`/`"UKTV"` name check. Added `"U" to
+        "https://u.co.uk/search?q="` to `providerWebMap` only.
+      - **Real bug found while wiring this up**: `providerWebMap["Channel 4"]` pointed at
+        `channel4.com/search?q=` — confirmed broken (every path/param combination tried 404s;
+        `robots.txt` no longer lists a top-level `/search` route; a 2020 Wayback snapshot shows
+        it once worked, so this is a real site change, not a pre-existing typo). channel4.com
+        also requires JS to render, so no direct URL could be headlessly re-confirmed. Fixed by
+        falling back to a Google site-restricted search (`google.com/search?q=site:channel4.com+`)
+        instead of guessing another direct route that could break again on Channel 4's next
+        redesign — still lands on real Channel 4 results, just via a search engine.
+      - New `ShowDetailViewModelTest` cases cover the origin-provider surfaced/dropped states and
+        the new click handler. Verified: `./gradlew assembleDebug testDebugUnitTest` clean (10/10
+        in `ShowDetailViewModelTest`); `./gradlew lint` reproduces only the pre-existing
+        `RemoveWorkManagerInitializer` failure, unrelated. **Not yet done**: on-device
+        confirmation that tapping the chip-origin CTA for each of the 5 providers actually lands
+        on a real, relevant search page for the tapped show — only the Channel 4 fix has been
+        spot-checked (still only via headless fetch, not the actual app on a device).
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
 - [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
@@ -110,11 +152,20 @@ of work, and update the checkboxes below as phases land.
 - [x] **Phase 7** — Dwell-time + explicit vote signals, a Settings screen to clear local data, and
       ViewModel unit tests across the app (see Phase 7's writeup — one real main-thread crash
       found/fixed getting the "clear data" path working)
-- [ ] ** Search URLSs** # Support show-specific search URLs in AppLauncher.  The current implementation only opens the homepage of streaming providers. This change updates `AppLauncher` to build search URLs for each provider, landing the user on a search results page for the specific show they are viewing.
-Manual Verification: 
-- Deploy the app and navigate to a show detail screen (e.g., "Outer Banks").
-- Tap on a provider (e.g., "Netflix").
-- Verify that the browser opens to the Netflix search page for "Outer Banks" instead of just the homepage.
+- [x] **Search URLs** — Support show-specific search URLs in AppLauncher. Landed in `d33a6c8`:
+      `AppLauncher.launchProviderApp()` gained `showName`/`fallbackUrl` params, and a new
+      `providerWebMap` builds `<provider search base> + URLEncoder.encode(showName)` for the
+      **not-installed fallback branch** — `WatchProvider` gained `tmdbUrl` (threaded through
+      `DefaultTmdbRepository`/mappers) as the last-resort fallback when a provider has no
+      hand-maintained web-search URL. `ShowDetailViewModel.onProviderClick()` now passes the
+      show's name and the full `WatchProvider` object instead of just a provider name string.
+      **Scope, stated explicitly**: this only changes the not-installed/web fallback path. The
+      installed-app branch (`getLaunchIntentForPackage` succeeds) still opens the provider app's
+      home screen with no show-specific handoff — there's still no public deep-link contract for
+      that (same Phase 6 reality-check finding, unchanged by this item). Manual verification as
+      originally written ("tap Netflix, browser opens to Netflix search for the show") only
+      actually exercises this fix if Netflix isn't installed on the test device — hasn't been
+      re-run on-device since landing; do that before considering this fully closed out.
 
 ## Reality checks against general_idea.md (apply throughout)
 
