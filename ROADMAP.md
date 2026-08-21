@@ -91,6 +91,17 @@ of work, and update the checkboxes below as phases land.
       start`, confirmed Play Store opened (foreground activity check) and, for My5, screenshotted
       it landing on the correct "5 - Channel 5" listing by Channel Five — not a wrong app or a
       dead link. Verified: `./gradlew assembleDebug testDebugUnitTest` clean.
+- [x] "Skip Show" during onboarding — distinct from the close-button skip above, which bails out of
+      the whole deck; this lets a user pass on one show they haven't seen (so it isn't a real
+      like/dislike) without either penalizing its genres or losing their place. `OnboardingScreen`
+      gained a `TextButton` ("Skip Show") below the like/info/dislike row, wired to a new
+      `OnboardingViewModel.onSkipShow()`. `onSwipe()`'s index-advance/completion logic was pulled
+      out into a shared private `advanceToNext()` so `onSkipShow()` reuses it directly, calling it
+      with no `SwipeEventDao` insert — the deck moves on exactly as if the user had swiped, but no
+      genre signal is recorded either way. New `OnboardingViewModelTest` case (`onSkipShow moves to
+      next index without recording any swipe event`) covers it. Verified: full unit suite green,
+      on-device confirmed the button appears, advances the deck, and still triggers completion on
+      the last card.
 
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)

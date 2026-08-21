@@ -53,16 +53,23 @@ class OnboardingViewModel @Inject constructor(
                     liked = liked
                 )
             )
+            advanceToNext()
+        }
+    }
 
-            _uiState.update { state ->
-                if (state is OnboardingUiState.Success) {
-                    val nextIndex = state.currentIndex + 1
-                    if (nextIndex >= state.shows.size) {
-                        completeOnboarding()
-                    }
-                    state.copy(currentIndex = nextIndex)
-                } else state
-            }
+    fun onSkipShow() {
+        advanceToNext()
+    }
+
+    private fun advanceToNext() {
+        _uiState.update { state ->
+            if (state is OnboardingUiState.Success) {
+                val nextIndex = state.currentIndex + 1
+                if (nextIndex >= state.shows.size) {
+                    completeOnboarding()
+                }
+                state.copy(currentIndex = nextIndex)
+            } else state
         }
     }
 

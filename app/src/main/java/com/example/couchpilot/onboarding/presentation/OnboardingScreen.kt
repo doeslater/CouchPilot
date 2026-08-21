@@ -27,6 +27,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -140,6 +141,13 @@ fun OnboardingScreen(
                             ) {
                                 Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
                             }
+                        }
+
+                        TextButton(
+                            onClick = { viewModel.onSkipShow() },
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        ) {
+                            Text("Skip Show")
                         }
                     }
                 }

@@ -60,4 +60,15 @@ class OnboardingViewModelTest {
         coVerify { preferencesRepository.setOnboardingCompleted(true) }
         coVerify(exactly = 0) { swipeEventDao.insertSwipeEvent(any()) }
     }
+
+    @Test
+    fun `onSkipShow moves to next index without recording any swipe event`() {
+        viewModel.onSkipShow()
+
+        coVerify(exactly = 0) { swipeEventDao.insertSwipeEvent(any()) }
+        val state = viewModel.uiState.value as OnboardingUiState.Success
+        assertEquals(1, state.currentIndex)
+        assertTrue(state.isFinished)
+        coVerify { preferencesRepository.setOnboardingCompleted(true) }
+    }
 }
