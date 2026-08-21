@@ -9,11 +9,16 @@ import javax.inject.Singleton
 @Singleton
 class AppLauncher @Inject constructor() {
 
+    // Verified against real Play Store listings (roadmap's "Known caveat" from Phase 6 - these
+    // were never checked against real installed APKs before). BBC iPlayer, ITVX and My5 were all
+    // wrong (uk.co.bbc.iplayer / com.itv.hub.android / com.five.android all 404 on Play Store) -
+    // fixed to their real ids. Channel 4, Netflix, Disney Plus, Amazon Prime Video and NOW were
+    // already correct.
     private val providerPackageMap = mapOf(
-        "BBC iPlayer" to "uk.co.bbc.iplayer",
-        "ITVX" to "com.itv.hub.android",
+        "BBC iPlayer" to "bbc.iplayer.android",
+        "ITVX" to "air.ITVMobilePlayer",
         "Channel 4" to "com.channel4.ondemand",
-        "My5" to "com.five.android",
+        "My5" to "com.channel5.my5",
         "Netflix" to "com.netflix.mediaclient",
         "Disney Plus" to "com.disney.disneyplus",
         "Amazon Prime Video" to "com.amazon.avod.thirdpartyclient",

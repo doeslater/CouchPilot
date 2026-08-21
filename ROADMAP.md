@@ -76,6 +76,22 @@ of work, and update the checkboxes below as phases land.
       tests: `ExampleInstrumentedTest`, `SwipeEventDaoTest`, `TvShowDaoTest`, `ScheduleDaoTest` — 0
       failures/errors/skipped), and `./gradlew assembleDebug testDebugUnitTest` still clean too.
 
+- [x] verify the `AppLauncher` provider package names on-device (Phase 6's carried-forward
+      caveat). Checked all 8 against real Play Store listings (`https://play.google.com/store/
+      apps/details?id=<pkg>`, confirmed by app name + live/404 status): **3 of 8 were wrong** —
+      BBC iPlayer (`uk.co.bbc.iplayer`), ITVX (`com.itv.hub.android`), and My5
+      (`com.five.android`) all 404'd on Play Store, meaning `AppLauncher.isAppInstalled()` could
+      never have found these apps even if installed, and the "not installed" fallback would have
+      opened a dead Play Store link. Fixed to their real ids: `bbc.iplayer.android`,
+      `air.ITVMobilePlayer`, `com.channel5.my5`. Channel 4, Netflix, Disney Plus, Amazon Prime
+      Video and NOW were already correct. None of the 8 apps were actually installed on the test
+      device, so the "launch installed app" branch couldn't be exercised end-to-end, but the
+      fallback branch was: triggered the exact `market://details?id=...` intent
+      `AppLauncher.launchProviderApp()` builds for each of the 3 fixed ids via `adb shell am
+      start`, confirmed Play Store opened (foreground activity check) and, for My5, screenshotted
+      it landing on the correct "5 - Channel 5" listing by Channel Five — not a wrong app or a
+      dead link. Verified: `./gradlew assembleDebug testDebugUnitTest` clean.
+
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
 - [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
@@ -282,9 +298,9 @@ live TMDB data, Firebase AI gone entirely.
     endpoints use) and caching the result for next time.
   - `AppLauncher.launchProviderApp()`: an unmapped provider fell through to a `market://
     details?id=null` / matching web URL instead of doing nothing.
-- **Known caveat, carried forward from the original plan, not addressed**: provider package names
-  in `AppLauncher` (BBC iPlayer, ITVX, etc.) are still unverified against real installed APKs — do
-  that before trusting the "open app" path actually opens the right app on a real device.
+- **Known caveat from the original plan, since resolved** (see the later "verify AppLauncher
+  provider package names" entry below): provider package names in `AppLauncher` were unverified
+  against real installed APKs — three of the eight turned out to be wrong.
 - Verified on-device: Tonight's "Dragons' Den" (previously "Show not found") now opens a full
   detail screen with real data via the network-fallback fix, no crash. Discover's equivalent path
   shares the identical `onShowClick` wiring already confirmed working on the Tonight side, though a
