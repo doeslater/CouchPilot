@@ -110,6 +110,11 @@ of work, and update the checkboxes below as phases land.
 - [x] **Phase 7** — Dwell-time + explicit vote signals, a Settings screen to clear local data, and
       ViewModel unit tests across the app (see Phase 7's writeup — one real main-thread crash
       found/fixed getting the "clear data" path working)
+- [ ] ** Search URLSs** # Support show-specific search URLs in AppLauncher.  The current implementation only opens the homepage of streaming providers. This change updates `AppLauncher` to build search URLs for each provider, landing the user on a search results page for the specific show they are viewing.
+Manual Verification: 
+- Deploy the app and navigate to a show detail screen (e.g., "Outer Banks").
+- Tap on a provider (e.g., "Netflix").
+- Verify that the browser opens to the Netflix search page for "Outer Banks" instead of just the homepage.
 
 ## Reality checks against general_idea.md (apply throughout)
 

@@ -89,7 +89,7 @@ class DefaultTmdbRepository @Inject constructor(
             
             allProviders
                 .distinctBy { it.providerId }
-                .map { it.toWatchProvider() }
+                .map { it.toWatchProvider(regionData?.link) }
         }
     }
 

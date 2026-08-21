@@ -11,6 +11,7 @@ import com.example.couchpilot.presentation.navigation.Route
 import com.example.couchpilot.showdetail.data.AppLauncher
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tmdb.domain.TvShow
+import com.example.couchpilot.tmdb.domain.WatchProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,8 +58,10 @@ class ShowDetailViewModel internal constructor(
         loadShowDetails()
     }
 
-    fun onProviderClick(context: android.content.Context, providerName: String) {
-        appLauncher.launchProviderApp(context, providerName)
+    fun onProviderClick(context: android.content.Context, provider: WatchProvider) {
+        val state = _uiState.value
+        val showName = if (state is ShowDetailUiState.Success) state.show.name else null
+        appLauncher.launchProviderApp(context, provider.name, showName, provider.tmdbUrl)
     }
 
     /** Explicit up/downvote - same storage path (and DAO) as onboarding's swipe events. */

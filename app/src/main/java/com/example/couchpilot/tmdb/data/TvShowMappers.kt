@@ -58,8 +58,9 @@ fun TvShowDetailDto.toEntity(): TvShowEntity = TvShowEntity(
     genreIds = genres.map { it.id }.joinToString(",")
 )
 
-fun WatchProviderDto.toWatchProvider(): WatchProvider = WatchProvider(
+fun WatchProviderDto.toWatchProvider(tmdbUrl: String? = null): WatchProvider = WatchProvider(
     id = providerId,
     name = providerName,
-    logoUrl = TmdbImages.logoUrl(logoPath)
+    logoUrl = TmdbImages.logoUrl(logoPath),
+    tmdbUrl = tmdbUrl
 )

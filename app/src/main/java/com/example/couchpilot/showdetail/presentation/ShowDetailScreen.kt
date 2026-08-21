@@ -91,7 +91,7 @@ private fun ShowDetailContent(
     show: TvShow,
     providers: List<WatchProvider>,
     userVote: Boolean?,
-    onProviderClick: (String) -> Unit,
+    onProviderClick: (WatchProvider) -> Unit,
     onVote: (Boolean) -> Unit
 ) {
     Column(
@@ -169,7 +169,7 @@ private fun ShowDetailContent(
 @Composable
 private fun ProviderRow(
     provider: WatchProvider,
-    onProviderClick: (String) -> Unit
+    onProviderClick: (WatchProvider) -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -191,7 +191,7 @@ private fun ProviderRow(
                 .weight(1f),
             style = MaterialTheme.typography.bodyLarge
         )
-        Button(onClick = { onProviderClick(provider.name) }) {
+        Button(onClick = { onProviderClick(provider) }) {
             Text("Open")
         }
     }

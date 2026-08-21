@@ -6,9 +6,11 @@ import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
 import com.example.couchpilot.showdetail.data.AppLauncher
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tmdb.domain.TvShow
+import com.example.couchpilot.tmdb.domain.WatchProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -125,5 +127,17 @@ class ShowDetailViewModelTest {
                 it.showId == 1 && it.liked && it.weight == DWELL_SIGNAL_WEIGHT
             })
         }
+    }
+
+    @Test
+    fun `onProviderClick calls appLauncher with show name`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        runCurrent()
+        val context = mockk<android.content.Context>()
+        val provider = WatchProvider(id = 1, name = "Netflix", logoUrl = null, tmdbUrl = "https://tmdb.com/netflix")
+
+        viewModel.onProviderClick(context, provider)
+
+        verify { appLauncher.launchProviderApp(context, "Netflix", "Show 1", "https://tmdb.com/netflix") }
     }
 }
