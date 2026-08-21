@@ -60,6 +60,16 @@ android {
         compose = true
         buildConfig = true
     }
+    packaging {
+        // mockk-android transitively pulls in junit-jupiter/junit-platform jars (mockk-jvm
+        // depends on junit-jupiter for its own tests, not something this app's test code uses -
+        // we're on JUnit4, not JUnit5), several of which ship an identical META-INF/LICENSE.md,
+        // colliding at androidTest packaging time. See CLAUDE.md's build/test notes.
+        resources {
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
+        }
+    }
     testOptions {
         // Without this, any unmocked Android SDK call reached from a plain JVM unit test
         // (e.g. android.util.Log.w in DiscoverViewModel's provider-load failure path) throws

@@ -64,6 +64,18 @@ of work, and update the checkboxes below as phases land.
       confirmed via `git stash` to already fail identically on a clean checkout) — not touched by
       this change, not yet fixed.
 
+- [x] fix the `connectedDebugAndroidTest` packaging collision (see CLAUDE.md's build/test notes).
+      Root cause tracked down via `./gradlew :app:dependencyInsight --dependency junit-jupiter
+      --configuration debugAndroidTestRuntimeClasspath`: `mockk-android` pulls in `mockk-jvm`,
+      which depends on `junit-jupiter`/`junit-platform` for *its own* test suite — nothing this
+      app's tests use, since app tests are JUnit4 — and six of those jars each ship an identical
+      `META-INF/LICENSE.md`. Fixed with a `packaging { resources { excludes += ... } }` block in
+      `app/build.gradle.kts`; excluding just `LICENSE.md` surfaced a second, identical collision on
+      `META-INF/LICENSE-notice.md` from the same jars (checked via `unzip -l` on one of them),
+      excluded too. Verified on-device: `./gradlew connectedDebugAndroidTest` now passes clean (7
+      tests: `ExampleInstrumentedTest`, `SwipeEventDaoTest`, `TvShowDaoTest`, `ScheduleDaoTest` — 0
+      failures/errors/skipped), and `./gradlew assembleDebug testDebugUnitTest` still clean too.
+
 - [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
       (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
 - [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and

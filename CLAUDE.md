@@ -28,12 +28,13 @@ Single Gradle module (`:app`), run from the repo root via the wrapper:
 - Instrumented/UI tests (`app/src/androidTest`, needs a device/emulator): `./gradlew connectedDebugAndroidTest`
 - Run a single instrumented test: `./gradlew connectedDebugAndroidTest --tests "com.example.couchpilot.onboarding.data.local.SwipeEventDaoTest"`
 
-`connectedDebugAndroidTest` currently fails at `mergeDebugAndroidTestJavaResource` (a `META-INF/LICENSE.md`
-collision from transitively-pulled `junit-jupiter`/`junit-platform` jars) independent of any app code —
-confirmed by reproducing it against a clean `git stash`. Not yet fixed; a `packaging { }` exclude block in
-`app/build.gradle.kts` is the likely fix whenever this is picked up. The individual instrumented test classes
-(`TvShowDaoTest`, `ScheduleDaoTest`, `SwipeEventDaoTest`) are fine — this is a whole-suite packaging issue, not
-a test failure.
+`connectedDebugAndroidTest` used to fail at `mergeDebugAndroidTestJavaResource` (`mockk-android` pulls in
+`mockk-jvm`, which depends on `junit-jupiter`/`junit-platform` for its *own* tests — not anything this app's
+test code uses, since app tests are JUnit4 — and six of those jars ship identical `META-INF/LICENSE.md` /
+`META-INF/LICENSE-notice.md` files, colliding at merge time). Fixed with a `packaging { resources { excludes
++= ... } } }` block in `app/build.gradle.kts` excluding both files. Verified on-device: full suite green (7
+tests: `ExampleInstrumentedTest`, `SwipeEventDaoTest`, `TvShowDaoTest`, `ScheduleDaoTest`, 0 failures/errors/
+skipped).
 
 ## Architecture notes
 
