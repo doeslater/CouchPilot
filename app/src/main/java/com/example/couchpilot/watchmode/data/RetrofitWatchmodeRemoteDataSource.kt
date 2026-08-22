@@ -22,7 +22,7 @@ class RetrofitWatchmodeRemoteDataSource @Inject constructor(
 
     suspend fun searchTitles(query: String): Result<WatchmodeSearchResponseDto, DataError.Network> {
         return safeCall {
-            watchmodeService.searchTitles(
+            watchmodeService.autocompleteTitles(
                 apiKey = BuildConfig.WATCHMODE_API_KEY,
                 searchValue = query
             )

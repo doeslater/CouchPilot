@@ -27,19 +27,22 @@ class DefaultWatchmodeRepository @Inject constructor(
 
     override suspend fun searchTitles(query: String): Result<List<WatchmodeSearchResult>, DataError> {
         return remoteDataSource.searchTitles(query).map { response ->
-            response.titleResults
-                .map { result ->
-                    WatchmodeSearchResult(
-                        id = result.id,
-                        name = result.name,
-                        imageUrl = result.imageUrl,
-                        isTvShow = result.resultType?.startsWith("tv", ignoreCase = true) == true,
-                        tmdbId = result.tmdbId
-                    )
-                }
-                // This is a TV recommendation app - surface TV matches ahead of movies that share
-                // a name, rather than showing Watchmode's raw (unranked) API order.
-                .sortedByDescending { it.isTvShow }
+            val results = response.results ?: response.titleResults ?: emptyList()
+            results.map { result ->
+                WatchmodeSearchResult(
+                    id = result.id,
+                    name = result.name,
+                    imageUrl = result.imageUrl,
+                    isTvShow = (result.resultType ?: result.type)?.startsWith("tv", ignoreCase = true) == true,
+                    tmdbId = result.tmdbId
+                )
+            }
+                // Use a stable sort: prioritize TV shows (CouchPilot's primary focus) but
+                // otherwise preserve the API's relevance ranking for better quality results.
+                .sortedWith(
+                    compareByDescending<WatchmodeSearchResult> { it.isTvShow }
+                        .thenBy { 0 } // placeholder to keep it stable if needed, but sortedWith is stable
+                )
         }
     }
 }

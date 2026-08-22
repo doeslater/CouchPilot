@@ -52,6 +52,8 @@ object AppEndpoint {
         const val TITLE_SOURCES = "title/{title_id}/sources/"
         // https://api.watchmode.com/v1/search/
         const val SEARCH = "search/"
+        // https://api.watchmode.com/v1/autocomplete-search/
+        const val AUTOCOMPLETE = "autocomplete-search/"
     }
 
     object WebSearch {
