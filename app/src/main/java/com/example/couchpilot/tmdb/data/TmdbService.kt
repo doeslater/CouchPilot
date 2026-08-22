@@ -73,4 +73,22 @@ interface TmdbService {
         @Query("include_adult") includeAdult: Boolean = false,
         @Header("Authorization") authHeader: String
     ): Response<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto>
+
+    @GET(AppEndpoint.Tmdb.SEARCH_TV)
+    suspend fun searchTv(
+        @Query("query") query: String,
+        @Query("language") language: String = "en-GB",
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto>
+
+    @GET(AppEndpoint.Tmdb.SEARCH_MOVIE)
+    suspend fun searchMovie(
+        @Query("query") query: String,
+        @Query("language") language: String = "en-GB",
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto>
 }

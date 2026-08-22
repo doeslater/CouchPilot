@@ -34,6 +34,10 @@ object AppEndpoint {
 
         // https://api.themoviedb.org/3/search/multi
         const val SEARCH_MULTI = "search/multi"
+        // https://api.themoviedb.org/3/search/tv
+        const val SEARCH_TV = "search/tv"
+        // https://api.themoviedb.org/3/search/movie
+        const val SEARCH_MOVIE = "search/movie"
     }
 
     object TvMaze {

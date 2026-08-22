@@ -79,4 +79,22 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
             )
         }
     }
+
+    suspend fun searchTv(query: String): Result<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto, DataError.Network> {
+        return safeCall {
+            tmdbService.searchTv(
+                query = query,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
+
+    suspend fun searchMovie(query: String): Result<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto, DataError.Network> {
+        return safeCall {
+            tmdbService.searchMovie(
+                query = query,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
 }

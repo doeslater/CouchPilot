@@ -1,8 +1,12 @@
 package com.example.couchpilot.watchmode.presentation
 
+import android.R.attr.onClick
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -36,6 +40,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
@@ -85,24 +90,33 @@ fun SearchScreen(
                 },
                 label = { Text("Search titles") },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                 trailingIcon = {
-                    if (query.isNotEmpty()) {
-                        IconButton(onClick = {
-                            query = ""
-                            viewModel.onQueryChange("")
-                        }) {
-                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                    Row {
+                        IconButton(onClick = { viewModel.onSearch(query) }) {
+                            Icon(Icons.Default.Search, contentDescription = "Search")
+                        }
+                        if (query.isNotEmpty()) {
+                            IconButton(
+                                onClick = {
+                                    query = ""
+                                    viewModel.onQueryChange("")
+                                }
+                            ) {
+                                Icon(Icons.Default.Close, contentDescription = "Clear search")
+                            }
                         }
                     }
+
                 },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { viewModel.onSearch(query) }),
                 singleLine = true
             )
 
             Box(modifier = Modifier.weight(1f).padding(top = 16.dp)) {
                 when (val state = uiState) {
                     is SearchUiState.Idle -> Text(
-                        text = "Type a show name to find where to watch it.",
+                        text = "Type a show name, then tap search to find where to watch it.",
                         modifier = Modifier.align(Alignment.Center)
                     )
                     is SearchUiState.Loading -> CircularProgressIndicator(

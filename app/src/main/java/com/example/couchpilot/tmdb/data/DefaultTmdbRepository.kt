@@ -10,6 +10,8 @@ import com.example.couchpilot.recommendation.domain.RecommendationScorer
 import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
@@ -93,12 +95,23 @@ class DefaultTmdbRepository @Inject constructor(
         }
     }
 
-    override suspend fun search(query: String): Result<List<TvShow>, DataError> {
-        return remoteDataSource.searchMulti(query).map { dto ->
-            dto.results
-                .filter { it.mediaType == "tv" || it.mediaType == "movie" }
-                .map { it.toTvShow() }
-        }
+    override suspend fun search(query: String): Result<List<TvShow>, DataError> = coroutineScope {
+        val tvDeferred = async { remoteDataSource.searchTv(query) }
+        val movieDeferred = async { remoteDataSource.searchMovie(query) }
+
+        val tvResult = tvDeferred.await()
+        val movieResult = movieDeferred.await()
+
+        if (tvResult is Result.Error) return@coroutineScope tvResult
+        if (movieResult is Result.Error) return@coroutineScope movieResult
+
+        val tvShows = (tvResult as Result.Success).data.results.map { it.toTvShow().copy(mediaType = "tv") }
+        val movies = (movieResult as Result.Success).data.results.map { it.toTvShow().copy(mediaType = "movie") }
+
+        Result.Success(
+            (tvShows + movies)
+                .sortedByDescending { it.voteAverage }
+        )
     }
 
     private fun WatchProvider.priorityRank(): Int {
