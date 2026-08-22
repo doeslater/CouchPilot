@@ -44,7 +44,6 @@ import coil3.compose.AsyncImage
 @Composable
 fun SearchScreen(
     onNavigateToShowDetail: (Int) -> Unit,
-    onNavigateToStreamingSources: (String, String) -> Unit,
     viewModel: SearchViewModel = hiltViewModel()
 ) {
     var query by remember { mutableStateOf("") }
@@ -56,8 +55,6 @@ fun SearchScreen(
         viewModel.navigationEvents.collect { event ->
             when (event) {
                 is SearchNavigationEvent.ToShowDetail -> onNavigateToShowDetail(event.tmdbId)
-                is SearchNavigationEvent.ToStreamingSources ->
-                    onNavigateToStreamingSources(event.titleId, event.showName)
                 is SearchNavigationEvent.ToGoogle -> uriHandler.openUri(event.url)
             }
         }

@@ -34,8 +34,4 @@ sealed interface Route {
     /** Detail-style screen reached from Settings, not a bottom-nav tab. */
     @Serializable
     data object Profile : Route
-
-    /** A screen showing granular streaming sources from Watchmode. */
-    @Serializable
-    data class StreamingSources(val titleId: String, val showName: String) : Route
 }

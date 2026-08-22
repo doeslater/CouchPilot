@@ -41,7 +41,6 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 @Composable
 fun ShowDetailScreen(
     onBack: () -> Unit,
-    onNavigateToStreamingSources: (String, String) -> Unit,
     viewModel: ShowDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -81,10 +80,7 @@ fun ShowDetailScreen(
                         originProviderName = state.originProviderName,
                         onProviderClick = { viewModel.onProviderClick(context, it) },
                         onOriginProviderClick = { viewModel.onOriginProviderClick(context) },
-                        onVote = viewModel::onVote,
-                        onCheckStreamingSources = {
-                            onNavigateToStreamingSources(state.show.id.toString(), state.show.name)
-                        }
+                        onVote = viewModel::onVote
                     )
                 }
             }
@@ -100,8 +96,7 @@ private fun ShowDetailContent(
     originProviderName: String?,
     onProviderClick: (WatchProvider) -> Unit,
     onOriginProviderClick: () -> Unit,
-    onVote: (Boolean) -> Unit,
-    onCheckStreamingSources: () -> Unit
+    onVote: (Boolean) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -173,17 +168,6 @@ private fun ShowDetailContent(
                 }
             }
 
-            if (providers.isNotEmpty()) {
-                Text(
-                    text = "Available on",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
-                )
-                providers.forEach { provider ->
-                    ProviderRow(provider, onProviderClick)
-                }
-            }
-
             Text(
                 text = "Rating: ${show.voteAverage}",
                 style = MaterialTheme.typography.bodyMedium,
@@ -194,14 +178,16 @@ private fun ShowDetailContent(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )
-
-            Button(
-                onClick = onCheckStreamingSources,
-                modifier = Modifier.fillMaxWidth().padding(top = 24.dp)
-            ) {
-                Text("Check all streaming sources (Watchmode)")
+            if (providers.isNotEmpty()) {
+                Text(
+                    text = "Available on",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
+                )
+                providers.forEach { provider ->
+                    ProviderRow(provider, onProviderClick)
+                }
             }
-            
             Spacer(modifier = Modifier.size(32.dp))
         }
     }

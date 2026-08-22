@@ -121,7 +121,7 @@ class SearchViewModel @Inject constructor(
 
             watchmodeRepository.getStreamingSources(watchmodeId)
                 .onSuccess { sources ->
-                    val event = if (sources.isEmpty()) {
+                    val event = if (sources.isEmpty() || defaultDestination(result.copy(id = watchmodeId.toInt())) is SearchNavigationEvent.ToGoogle) {
                         SearchNavigationEvent.ToGoogle(googleSearchUrl(result.name))
                     } else {
                         defaultDestination(result.copy(id = watchmodeId.toInt()))
@@ -129,8 +129,8 @@ class SearchViewModel @Inject constructor(
                     _navigationEvents.send(event)
                 }
                 .onFailure {
-                    // Couldn't confirm availability either way - fail open rather than swallow
-                    // the tap, and let the destination screen surface its own error state.
+                    // Couldn't confirm availability either way - fail open to detail if we have
+                    // the TMDB mapping, otherwise fallback to Google.
                     _navigationEvents.send(defaultDestination(result.copy(id = watchmodeId.toInt())))
                 }
             _checkingResultId.value = null
@@ -149,7 +149,7 @@ class SearchViewModel @Inject constructor(
         return if (result.tmdbId != null && result.isTvShow) {
             SearchNavigationEvent.ToShowDetail(result.tmdbId)
         } else {
-            SearchNavigationEvent.ToStreamingSources(result.id.toString(), result.name)
+            SearchNavigationEvent.ToGoogle(googleSearchUrl(result.name))
         }
     }
 
@@ -167,6 +167,5 @@ sealed interface SearchUiState {
 
 sealed interface SearchNavigationEvent {
     data class ToShowDetail(val tmdbId: Int) : SearchNavigationEvent
-    data class ToStreamingSources(val titleId: String, val showName: String) : SearchNavigationEvent
     data class ToGoogle(val url: String) : SearchNavigationEvent
 }

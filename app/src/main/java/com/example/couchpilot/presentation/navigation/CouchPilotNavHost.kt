@@ -29,7 +29,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
@@ -38,7 +37,6 @@ import com.example.couchpilot.settings.presentation.SettingsScreen
 import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
 import com.example.couchpilot.watchmode.presentation.SearchScreen
-import com.example.couchpilot.watchmode.presentation.StreamingSourcesScreen
 
 private data class TopLevelTab(val route: Route, val label: String, val icon: ImageVector)
 
@@ -116,12 +114,8 @@ fun CouchPilotNavHost(
             composable<Route.Search> {
                 SearchScreen(
                     // Watchmode resolved this hit to a TMDB show - route through ShowDetail so it
-                    // gets the same taste-scoring/vote/dwell-time treatment as any other show,
-                    // instead of skipping straight to the granular streaming-sources screen.
-                    onNavigateToShowDetail = { tmdbId -> navController.navigate(Route.ShowDetail(tmdbId)) },
-                    onNavigateToStreamingSources = { titleId, name ->
-                        navController.navigate(Route.StreamingSources(titleId, name))
-                    }
+                    // gets the same taste-scoring/vote/dwell-time treatment as any other show.
+                    onNavigateToShowDetail = { tmdbId -> navController.navigate(Route.ShowDetail(tmdbId)) }
                 )
             }
             composable<Route.Settings> {
@@ -135,18 +129,8 @@ fun CouchPilotNavHost(
             }
             composable<Route.ShowDetail> { 
                 ShowDetailScreen(
-                    onBack = { navController.popBackStack() },
-                    onNavigateToStreamingSources = { id, name ->
-                        navController.navigate(Route.StreamingSources(id, name))
-                    }
-                ) 
-            }
-            composable<Route.StreamingSources> { backStackEntry ->
-                val route = backStackEntry.toRoute<Route.StreamingSources>()
-                StreamingSourcesScreen(
-                    showName = route.showName,
                     onBack = { navController.popBackStack() }
-                )
+                ) 
             }
         }
     }
