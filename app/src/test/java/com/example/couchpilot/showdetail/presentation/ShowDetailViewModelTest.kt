@@ -9,6 +9,7 @@ import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
+import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
@@ -55,8 +56,8 @@ class ShowDetailViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun buildViewModel(): ShowDetailViewModel {
-        return ShowDetailViewModel(showId = 1, tmdbRepository, appLauncher, swipeEventDao)
+    private fun buildViewModel(originProviderName: String? = null): ShowDetailViewModel {
+        return ShowDetailViewModel(showId = 1, tmdbRepository, appLauncher, swipeEventDao, originProviderName)
     }
 
     @Test
@@ -139,5 +140,50 @@ class ShowDetailViewModelTest {
         viewModel.onProviderClick(context, provider)
 
         verify { appLauncher.launchProviderApp(context, "Netflix", "Show 1", "https://tmdb.com/netflix") }
+    }
+
+    @Test
+    fun `origin provider from a Discover chip is surfaced when AppLauncher has a website search for it`() =
+        runTest(testDispatcher) {
+            every { appLauncher.hasWebsiteSearch("BBC iPlayer") } returns true
+            val viewModel = buildViewModel(originProviderName = "BBC iPlayer")
+            runCurrent()
+
+            val state = viewModel.uiState.value as ShowDetailUiState.Success
+            assertEquals("BBC iPlayer", state.originProviderName)
+        }
+
+    @Test
+    fun `origin provider is dropped when AppLauncher has no website search mapped for it`() =
+        runTest(testDispatcher) {
+            every { appLauncher.hasWebsiteSearch("Some Unmapped Provider") } returns false
+            val viewModel = buildViewModel(originProviderName = "Some Unmapped Provider")
+            runCurrent()
+
+            val state = viewModel.uiState.value as ShowDetailUiState.Success
+            assertEquals(null, state.originProviderName)
+        }
+
+    @Test
+    fun `onOriginProviderClick opens the provider website with the show name`() = runTest(testDispatcher) {
+        every { appLauncher.hasWebsiteSearch("BBC iPlayer") } returns true
+        val viewModel = buildViewModel(originProviderName = "BBC iPlayer")
+        runCurrent()
+        val context = mockk<android.content.Context>()
+
+        viewModel.onOriginProviderClick(context)
+
+        verify { appLauncher.openProviderWebsite(context, "BBC iPlayer", "Show 1") }
+    }
+
+    @Test
+    fun `onOriginProviderClick does nothing when there is no origin provider`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        runCurrent()
+        val context = mockk<android.content.Context>()
+
+        viewModel.onOriginProviderClick(context)
+
+        verify(exactly = 0) { appLauncher.openProviderWebsite(any(), any(), any(), any()) }
     }
 }

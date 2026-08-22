@@ -32,7 +32,10 @@ class ShowDetailViewModel internal constructor(
     private val showId: Int,
     private val tmdbRepository: TmdbRepository,
     private val appLauncher: AppLauncher,
-    private val swipeEventDao: SwipeEventDao
+    private val swipeEventDao: SwipeEventDao,
+    // Trailing + defaulted so the existing (showId, tmdbRepository, appLauncher, swipeEventDao)
+    // positional test call sites keep compiling unchanged.
+    private val originProviderName: String? = null
 ) : ViewModel() {
     // savedStateHandle.toRoute() decodes route args via a real android.os.Bundle round-trip,
     // which needs Robolectric to run outside a device/emulator - not worth pulling in for one
@@ -48,7 +51,8 @@ class ShowDetailViewModel internal constructor(
         savedStateHandle.toRoute<Route.ShowDetail>().id,
         tmdbRepository,
         appLauncher,
-        swipeEventDao
+        swipeEventDao,
+        savedStateHandle.toRoute<Route.ShowDetail>().originProviderName
     )
 
     private val _uiState = MutableStateFlow<ShowDetailUiState>(ShowDetailUiState.Loading)
@@ -62,6 +66,15 @@ class ShowDetailViewModel internal constructor(
         val state = _uiState.value
         val showName = if (state is ShowDetailUiState.Success) state.show.name else null
         appLauncher.launchProviderApp(context, provider.name, showName, provider.tmdbUrl)
+    }
+
+    /** The chip-origin CTA - always a website search, never the install-check/app-open path
+     *  (see AppLauncher.openProviderWebsite's doc comment for why). */
+    fun onOriginProviderClick(context: android.content.Context) {
+        val state = _uiState.value
+        if (state !is ShowDetailUiState.Success) return
+        val providerName = state.originProviderName ?: return
+        appLauncher.openProviderWebsite(context, providerName, state.show.name)
     }
 
     /** Explicit up/downvote - same storage path (and DAO) as onboarding's swipe events. */
@@ -91,7 +104,15 @@ class ShowDetailViewModel internal constructor(
                         providerResult.data
                     } else emptyList()
 
-                    _uiState.value = ShowDetailUiState.Success(show, providers)
+                    // Only surface the CTA if AppLauncher actually has a website search mapped
+                    // for this provider - otherwise it'd render a button that just no-ops.
+                    val ctaProviderName = originProviderName?.takeIf { appLauncher.hasWebsiteSearch(it) }
+
+                    _uiState.value = ShowDetailUiState.Success(
+                        show,
+                        providers,
+                        originProviderName = ctaProviderName
+                    )
                     startDwellTracking(show)
                 } else {
                     _uiState.value = ShowDetailUiState.Error("Show not found")

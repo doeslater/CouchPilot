@@ -38,7 +38,9 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 
 @Composable
 fun DiscoverScreen(
-    onShowClick: (Int) -> Unit,
+    // originProviderName is null unless a specific chip (not "All") is selected - lets
+    // ShowDetailScreen offer a CTA back to that same provider (see Route.ShowDetail's doc).
+    onShowClick: (id: Int, originProviderName: String?) -> Unit,
     viewModel: DiscoverViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -58,9 +60,12 @@ fun DiscoverScreen(
                     selectedId = state.selectedProviderId,
                     onProviderClick = { viewModel.selectProvider(it) }
                 )
+                val selectedProviderName = state.providers
+                    .firstOrNull { it.id == state.selectedProviderId }
+                    ?.name
                 TrendingGrid(
                     shows = state.shows,
-                    onShowClick = { show -> onShowClick(show.id) }
+                    onShowClick = { show -> onShowClick(show.id, selectedProviderName) }
                 )
             }
         }

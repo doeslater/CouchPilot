@@ -96,7 +96,9 @@ fun CouchPilotNavHost(
                 TonightScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
             }
             composable<Route.Discover> {
-                DiscoverScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
+                DiscoverScreen(onShowClick = { id, originProviderName ->
+                    navController.navigate(Route.ShowDetail(id, originProviderName))
+                })
             }
             composable<Route.Settings> {
                 SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })

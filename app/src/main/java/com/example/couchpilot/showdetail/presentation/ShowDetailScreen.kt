@@ -77,7 +77,9 @@ fun ShowDetailScreen(
                         show = state.show,
                         providers = state.providers,
                         userVote = state.userVote,
+                        originProviderName = state.originProviderName,
                         onProviderClick = { viewModel.onProviderClick(context, it) },
+                        onOriginProviderClick = { viewModel.onOriginProviderClick(context) },
                         onVote = viewModel::onVote
                     )
                 }
@@ -91,7 +93,9 @@ private fun ShowDetailContent(
     show: TvShow,
     providers: List<WatchProvider>,
     userVote: Boolean?,
+    originProviderName: String?,
     onProviderClick: (WatchProvider) -> Unit,
+    onOriginProviderClick: () -> Unit,
     onVote: (Boolean) -> Unit
 ) {
     Column(
@@ -138,6 +142,31 @@ private fun ShowDetailContent(
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.secondary
             )
+
+            // Only present when this screen was reached via a Discover provider chip - keeps
+            // the user's path consistent with why they filtered in the first place, rather than
+            // dropping them into the same generic list everyone else sees.
+            if (originProviderName != null) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Search show on ",
+                        modifier = Modifier
+                            .padding(start = 16.dp)
+                            .weight(1f),
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                    Button(
+                        onClick = onOriginProviderClick
+                    ) {
+                        Text("$originProviderName")
+                    }
+                }
+            }
 
             if (providers.isNotEmpty()) {
                 Text(
