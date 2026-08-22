@@ -1,5 +1,5 @@
 package com.example.couchpilot
 
-object Constants {
+object AppConstants {
     const val DEFAULT_REGION = "GB"
 }

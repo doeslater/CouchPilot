@@ -18,6 +18,11 @@ data class EpisodeDto(
     val show: TvMazeShowDto
 )
 
+data class TvMazeSearchResponseDto(
+    val score: Double,
+    val show: TvMazeShowDto
+)
+
 data class TvMazeShowDto(
     val id: Int,
     val url: String?,

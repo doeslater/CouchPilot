@@ -3,6 +3,7 @@ package com.example.couchpilot.showdetail.data
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import com.example.couchpilot.AppEndpoint
 import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,19 +29,19 @@ class AppLauncher @Inject constructor() {
     )
 
     private val providerWebMap = mapOf(
-        "BBC iPlayer" to "https://www.bbc.co.uk/iplayer/search?q=",
-        "ITVX" to "https://www.itv.com/watch/search?q=",
-        "Channel 4" to "https://www.google.com/search?q=site%3Achannel4.com+",
-        "5" to "https://www.channel5.com/search?q=",
-        "Channel 5" to "https://www.channel5.com/search?q=",
-        "My5" to "https://www.channel5.com/search?q=",
-        "Netflix" to "https://www.netflix.com/search?q=",
-        "Disney Plus" to "https://www.disneyplus.com/search?q=",
-        "Amazon Prime Video" to "https://www.primevideo.com/search/?phrase=",
-        "NOW" to "https://www.nowtv.com/search?q=",
-        "Sky Go" to "https://www.sky.com/watch/search?q=",
-        "U" to "https://u.co.uk/search?q=",
-        "UKTV" to "https://u.co.uk/search?q="
+        "BBC iPlayer" to AppEndpoint.WebSearch.BBC_IPLAYER,
+        "ITVX" to AppEndpoint.WebSearch.ITVX,
+        "Channel 4" to AppEndpoint.WebSearch.CHANNEL_4,
+        "5" to AppEndpoint.WebSearch.CHANNEL_5,
+        "Channel 5" to AppEndpoint.WebSearch.CHANNEL_5,
+        "My5" to AppEndpoint.WebSearch.CHANNEL_5,
+        "Netflix" to AppEndpoint.WebSearch.NETFLIX,
+        "Disney Plus" to AppEndpoint.WebSearch.DISNEY_PLUS,
+        "Amazon Prime Video" to AppEndpoint.WebSearch.AMAZON_PRIME,
+        "NOW" to AppEndpoint.WebSearch.NOW,
+        "Sky Go" to AppEndpoint.WebSearch.SKY_GO,
+        "U" to AppEndpoint.WebSearch.UKTV,
+        "UKTV" to AppEndpoint.WebSearch.UKTV
     )
 
     fun launchProviderApp(
@@ -62,7 +63,7 @@ class AppLauncher @Inject constructor() {
 
         // Fallback: Open in web browser if available, else Play Store
         val webUrl = resolveSearchOrFallbackUrl(providerName, showName, fallbackUrl)
-            ?: packageName?.let { "https://play.google.com/store/apps/details?id=$it" }
+            ?: packageName?.let { "${AppEndpoint.PLAY_STORE_BASE_URL}$it" }
             ?: return
 
         val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(webUrl))

@@ -1,5 +1,6 @@
 package com.example.couchpilot.tvmaze.di
 
+import com.example.couchpilot.AppEndpoint
 import com.example.couchpilot.core.data.RetrofitFactory
 import com.example.couchpilot.tvmaze.data.DefaultTvMazeRepository
 import com.example.couchpilot.tvmaze.data.TvMazeService
@@ -24,7 +25,7 @@ abstract class TvMazeModule {
         @Provides
         @Singleton
         fun provideTvMazeService(okHttpClient: OkHttpClient): TvMazeService {
-            return RetrofitFactory.create(okHttpClient, "https://api.tvmaze.com/")
+            return RetrofitFactory.create(okHttpClient, AppEndpoint.TVMAZE_BASE_URL)
                 .create(TvMazeService::class.java)
         }
     }

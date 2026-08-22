@@ -4,7 +4,7 @@ import com.example.couchpilot.BuildConfig
 import com.example.couchpilot.core.data.safeCall
 import com.example.couchpilot.core.domain.DataError
 import com.example.couchpilot.core.domain.Result
-import com.example.couchpilot.Constants.DEFAULT_REGION
+import com.example.couchpilot.AppConstants.DEFAULT_REGION
 import com.example.couchpilot.tmdb.data.dto.TrendingTvShowsResponseDto
 import com.example.couchpilot.tmdb.data.dto.WatchProvidersResponseDto
 import javax.inject.Inject

@@ -1,7 +1,9 @@
 package com.example.couchpilot.tmdb.data
 
+import com.example.couchpilot.AppEndpoint
+
 object TmdbImages {
-    private const val BASE_URL = "https://image.tmdb.org/t/p/"
+    private const val BASE_URL = AppEndpoint.TMDB_IMAGE_BASE_URL
 
     fun posterUrl(path: String?, size: String = "w500"): String? = imageUrl(path, size)
 

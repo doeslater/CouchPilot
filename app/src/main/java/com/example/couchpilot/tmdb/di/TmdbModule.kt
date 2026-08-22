@@ -1,5 +1,6 @@
 package com.example.couchpilot.tmdb.di
 
+import com.example.couchpilot.AppEndpoint
 import com.example.couchpilot.core.data.RetrofitFactory
 import com.example.couchpilot.tmdb.data.DefaultTmdbRepository
 import com.example.couchpilot.tmdb.data.TmdbService
@@ -24,7 +25,7 @@ abstract class TmdbModule {
         @Provides
         @Singleton
         fun provideTmdbService(okHttpClient: OkHttpClient): TmdbService {
-            return RetrofitFactory.create(okHttpClient, "https://api.themoviedb.org/3/")
+            return RetrofitFactory.create(okHttpClient, AppEndpoint.TMDB_BASE_URL)
                 .create(TmdbService::class.java)
         }
     }

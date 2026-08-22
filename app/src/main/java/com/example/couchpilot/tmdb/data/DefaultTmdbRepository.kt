@@ -1,6 +1,6 @@
 package com.example.couchpilot.tmdb.data
 
-import com.example.couchpilot.Constants.DEFAULT_REGION
+import com.example.couchpilot.AppConstants.DEFAULT_REGION
 import com.example.couchpilot.core.domain.DataError
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.core.domain.map
