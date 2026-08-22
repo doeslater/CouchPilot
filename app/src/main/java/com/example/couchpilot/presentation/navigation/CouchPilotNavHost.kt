@@ -3,6 +3,7 @@ package com.example.couchpilot.presentation.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
@@ -24,6 +25,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
@@ -31,12 +33,15 @@ import com.example.couchpilot.profile.presentation.ProfileScreen
 import com.example.couchpilot.settings.presentation.SettingsScreen
 import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
+import com.example.couchpilot.watchmode.presentation.SearchScreen
+import com.example.couchpilot.watchmode.presentation.StreamingSourcesScreen
 
 private data class TopLevelTab(val route: Route, val label: String, val icon: ImageVector)
 
 private val topLevelTabs = listOf(
     TopLevelTab(Route.Tonight, "Tonight", Icons.Filled.Home),
     TopLevelTab(Route.Discover, "Discover", Icons.Filled.Star),
+    TopLevelTab(Route.Search, "Search", Icons.Filled.Search),
     TopLevelTab(Route.Settings, "Settings", Icons.Filled.Settings),
 )
 
@@ -100,6 +105,11 @@ fun CouchPilotNavHost(
                     navController.navigate(Route.ShowDetail(id, originProviderName))
                 })
             }
+            composable<Route.Search> {
+                SearchScreen(onTitleClick = { id, name ->
+                    navController.navigate(Route.StreamingSources(id.toString(), name))
+                })
+            }
             composable<Route.Settings> {
                 SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })
             }
@@ -110,7 +120,19 @@ fun CouchPilotNavHost(
                 OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 
             }
             composable<Route.ShowDetail> { 
-                ShowDetailScreen(onBack = { navController.popBackStack() }) 
+                ShowDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToStreamingSources = { id, name ->
+                        navController.navigate(Route.StreamingSources(id, name))
+                    }
+                ) 
+            }
+            composable<Route.StreamingSources> { backStackEntry ->
+                val route = backStackEntry.toRoute<Route.StreamingSources>()
+                StreamingSourcesScreen(
+                    showName = route.showName,
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
     }

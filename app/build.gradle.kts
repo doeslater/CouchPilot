@@ -43,6 +43,11 @@ android {
             "TMDB_READ_ACCESS_TOKEN",
             "\"${secretsProperties.getProperty("tmdbReadAccessToken", "")}\""
         )
+        buildConfigField(
+            "String",
+            "WATCHMODE_API_KEY",
+            "\"${secretsProperties.getProperty("watchmodeApiKey", "")}\""
+        )
     }
 
     buildTypes {

@@ -41,6 +41,7 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 @Composable
 fun ShowDetailScreen(
     onBack: () -> Unit,
+    onNavigateToStreamingSources: (String, String) -> Unit,
     viewModel: ShowDetailViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -80,7 +81,10 @@ fun ShowDetailScreen(
                         originProviderName = state.originProviderName,
                         onProviderClick = { viewModel.onProviderClick(context, it) },
                         onOriginProviderClick = { viewModel.onOriginProviderClick(context) },
-                        onVote = viewModel::onVote
+                        onVote = viewModel::onVote,
+                        onCheckStreamingSources = {
+                            onNavigateToStreamingSources(state.show.id.toString(), state.show.name)
+                        }
                     )
                 }
             }
@@ -96,7 +100,8 @@ private fun ShowDetailContent(
     originProviderName: String?,
     onProviderClick: (WatchProvider) -> Unit,
     onOriginProviderClick: () -> Unit,
-    onVote: (Boolean) -> Unit
+    onVote: (Boolean) -> Unit,
+    onCheckStreamingSources: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -189,6 +194,13 @@ private fun ShowDetailContent(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )
+
+            Button(
+                onClick = onCheckStreamingSources,
+                modifier = Modifier.fillMaxWidth().padding(top = 24.dp)
+            ) {
+                Text("Check all streaming sources (Watchmode)")
+            }
             
             Spacer(modifier = Modifier.size(32.dp))
         }

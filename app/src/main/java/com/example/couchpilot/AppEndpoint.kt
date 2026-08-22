@@ -4,6 +4,7 @@ object AppEndpoint {
     const val TMDB_BASE_URL = "https://api.themoviedb.org/3/"
     const val TMDB_IMAGE_BASE_URL = "https://image.tmdb.org/t/p/"
     const val TVMAZE_BASE_URL = "https://api.tvmaze.com/"
+    const val WATCHMODE_BASE_URL = "https://api.watchmode.com/v1/"
     const val PLAY_STORE_BASE_URL = "https://play.google.com/store/apps/details?id="
 
     object Tmdb {
@@ -44,6 +45,13 @@ object AppEndpoint {
 
         // https://api.tvmaze.com/shows/{id}
         const val SHOW_DETAILS = "shows/{id}"
+    }
+
+    object Watchmode {
+        // https://api.watchmode.com/v1/title/{title_id}/sources/
+        const val TITLE_SOURCES = "title/{title_id}/sources/"
+        // https://api.watchmode.com/v1/search/
+        const val SEARCH = "search/"
     }
 
     object WebSearch {
