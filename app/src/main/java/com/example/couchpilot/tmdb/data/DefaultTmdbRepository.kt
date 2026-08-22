@@ -21,9 +21,9 @@ class DefaultTmdbRepository @Inject constructor(
     override suspend fun getTrendingTvShows(providerId: Int?): Result<List<TvShow>, DataError> {
         if (providerId == null) {
             val cached = tvShowDao.getAllTvShows().first()
-            val isFresh = cached.isNotEmpty() && 
+            val isFresh = cached.isNotEmpty() &&
                 (System.currentTimeMillis() - cached.first().lastUpdated < 24 * 60 * 60 * 1000)
-            
+
             if (isFresh) {
                 return Result.Success(rankShows(cached.map { it.toTvShow() }))
             }
@@ -83,10 +83,10 @@ class DefaultTmdbRepository @Inject constructor(
     override suspend fun getWatchProvidersForShow(tvId: Int): Result<List<WatchProvider>, DataError> {
         return remoteDataSource.getWatchProvidersForShow(tvId).map { dto ->
             val regionData = dto.results[DEFAULT_REGION]
-            val allProviders = (regionData?.flatrate ?: emptyList()) + 
-                               (regionData?.buy ?: emptyList()) + 
+            val allProviders = (regionData?.flatrate ?: emptyList()) +
+                               (regionData?.buy ?: emptyList()) +
                                (regionData?.rent ?: emptyList())
-            
+
             allProviders
                 .distinctBy { it.providerId }
                 .map { it.toWatchProvider(regionData?.link) }
@@ -98,10 +98,16 @@ class DefaultTmdbRepository @Inject constructor(
             name.contains("BBC", ignoreCase = true) -> 0
             name == "ITVX" -> 1
             name.contains("Channel 4", ignoreCase = true) || name.contains("All 4", ignoreCase = true) -> 2
-            name.contains("My5", ignoreCase = true) || name.contains("Channel 5", ignoreCase = true) -> 3
+            name.contains("My5", ignoreCase = true) || name.contains("Channel 5", ignoreCase = true) || name == "5" -> 3
             name == "U" || name.contains("UKTV", ignoreCase = true) -> 4
-            name.contains("Sky", ignoreCase = true) -> 5
-            else -> 6
+            name == "Sky Go" -> 5
+            name.contains("arte", ignoreCase = true) -> 6
+            name == "Netflix" -> 7
+            name == "Apple TV" -> 8
+            name == "Disney+" -> 9
+            name == "HBO Max" -> 10
+            name == "Amazon Prime" -> 11
+            else -> 12
         }
     }
 }

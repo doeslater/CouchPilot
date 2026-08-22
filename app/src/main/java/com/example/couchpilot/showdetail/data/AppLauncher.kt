@@ -31,6 +31,7 @@ class AppLauncher @Inject constructor() {
         "BBC iPlayer" to "https://www.bbc.co.uk/iplayer/search?q=",
         "ITVX" to "https://www.itv.com/watch/search?q=",
         "Channel 4" to "https://www.google.com/search?q=site%3Achannel4.com+",
+        "5" to "https://www.channel5.com/search?q=",
         "Channel 5" to "https://www.channel5.com/search?q=",
         "My5" to "https://www.channel5.com/search?q=",
         "Netflix" to "https://www.netflix.com/search?q=",
