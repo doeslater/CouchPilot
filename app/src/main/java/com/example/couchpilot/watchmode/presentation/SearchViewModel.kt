@@ -114,7 +114,7 @@ class SearchViewModel @Inject constructor(
             }
 
             if (watchmodeId == null) {
-                _navigationEvents.send(SearchNavigationEvent.ToImdb(imdbSearchUrl(result.name)))
+                _navigationEvents.send(SearchNavigationEvent.ToGoogle(googleSearchUrl(result.name)))
                 _checkingResultId.value = null
                 return@launch
             }
@@ -122,7 +122,7 @@ class SearchViewModel @Inject constructor(
             watchmodeRepository.getStreamingSources(watchmodeId)
                 .onSuccess { sources ->
                     val event = if (sources.isEmpty()) {
-                        SearchNavigationEvent.ToImdb(imdbSearchUrl(result.name))
+                        SearchNavigationEvent.ToGoogle(googleSearchUrl(result.name))
                     } else {
                         defaultDestination(result.copy(id = watchmodeId.toInt()))
                     }
@@ -153,8 +153,8 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    private fun imdbSearchUrl(showName: String): String {
-        return AppEndpoint.WebSearch.IMDB + URLEncoder.encode(showName, "UTF-8")
+    private fun googleSearchUrl(showName: String): String {
+        return AppEndpoint.WebSearch.GOOGLE + URLEncoder.encode(showName, "UTF-8")
     }
 }
 
@@ -168,5 +168,5 @@ sealed interface SearchUiState {
 sealed interface SearchNavigationEvent {
     data class ToShowDetail(val tmdbId: Int) : SearchNavigationEvent
     data class ToStreamingSources(val titleId: String, val showName: String) : SearchNavigationEvent
-    data class ToImdb(val url: String) : SearchNavigationEvent
+    data class ToGoogle(val url: String) : SearchNavigationEvent
 }

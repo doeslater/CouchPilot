@@ -58,7 +58,7 @@ fun SearchScreen(
                 is SearchNavigationEvent.ToShowDetail -> onNavigateToShowDetail(event.tmdbId)
                 is SearchNavigationEvent.ToStreamingSources ->
                     onNavigateToStreamingSources(event.titleId, event.showName)
-                is SearchNavigationEvent.ToImdb -> uriHandler.openUri(event.url)
+                is SearchNavigationEvent.ToGoogle -> uriHandler.openUri(event.url)
             }
         }
     }

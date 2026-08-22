@@ -73,8 +73,8 @@ object AppEndpoint {
         const val SKY_GO = "https://www.sky.com/watch/search?q="
         const val UKTV = "https://u.co.uk/search?q="
 
-        // Fallback for a search result with no UK streaming sources - a name-based IMDb search
+        // Fallback for a search result with no UK streaming sources - a name-based Google search
         // rather than an exact page, since we may not have (or may not trust) an id for the title.
-        const val IMDB = "https://www.imdb.com/find/?q="
+        const val GOOGLE = "https://www.google.com/search?q=where+to+watch+"
     }
 }
