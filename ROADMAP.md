@@ -21,6 +21,10 @@ of work, and update the checkboxes below as phases land.
       full "This Week" day-selector, not just today (see Phase 2's writeup)
 - [x] **Phase 3** — Room offline-first cache + Wi-Fi prefetch
 - [x] **Phase 4** — Swipe onboarding + preference storage
+- [x] **Phase 5** — Local recommendation engine (heuristic)
+- [x] **Phase 6** — Watch providers + app deep-link substitute
+- [x] **Phase 7** — Implicit signals, polish, tests
+- [x] **Phase 8** — Watchmode integration, Search tab, Edge-to-Edge, and UI polish
 
 - [x] allow user to skip onboarding and view results without recommendations. A close (✕) icon
       button, top-end of `OnboardingScreen`, appears whenever the deck isn't finished and calls
@@ -166,6 +170,33 @@ of work, and update the checkboxes below as phases land.
       originally written ("tap Netflix, browser opens to Netflix search for the show") only
       actually exercises this fix if Netflix isn't installed on the test device — hasn't been
       re-run on-device since landing; do that before considering this fully closed out.
+
+### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
+**Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.
+
+- **Watchmode integration**: added a new `Search` tab allowing users to find any show/movie's
+  streaming availability in the UK using the Watchmode API.
+  - Landed as `watchmode/` package with full Clean Architecture stack (Service, DataSource,
+    Repository, ViewModel, UI).
+  - Added `StreamingSourcesScreen` to show granular availability (SUB/RENT/BUY), formats (HD/4K),
+    and pricing, with direct web links.
+  - Integrated into `ShowDetailScreen` via a primary "Check all streaming sources (Watchmode)" button.
+  - **Watchmode ↔ TMDB bridge**: search results that map to a TMDB ID and are TV shows are
+    routed through `ShowDetailScreen` first, allowing them to contribute to the user's taste
+    profile (scoring/votes/dwell-time) just like schedule-based shows.
+- **Centralized Endpoint Management**: created `AppEndpoint.kt` to hold all base URLs (TMDB,
+  TVmaze, Watchmode), API paths with full-URL comments, and UK provider web search paths
+  (BBC, ITVX, etc.). Cleaned up `AppLauncher` and `TmdbImages` to use these constants.
+- **Immersive UI (Edge-to-Edge)**: implemented full Android Edge-to-Edge support using
+  `enableEdgeToEdge()`, ensuring content draws behind system bars.
+  - Refactored all screens to use Material 3 `Scaffold` and `TopAppBar`.
+  - Resolved nested Scaffold padding conflicts in `CouchPilotNavHost` to remove gaps at the top
+    and bottom of screens.
+  - Added data source subtitles ("Powered by TMDB", etc.) to all top bars for transparency.
+- **Search UX**: added a Clear button to the Search bar and configured the IME (keyboard) to
+  not hide the input field.
+- Verified on-device: Search works, clear button works, Watchmode details load, and the UI is now
+  completely edge-to-edge with no black bars at top or bottom.
 
 ## Reality checks against general_idea.md (apply throughout)
 

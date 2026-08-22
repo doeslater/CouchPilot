@@ -5,6 +5,7 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 * **Data Sources (100% Free):**
 * **TVmaze API:** Free, no-key required. Supports schedule filtering specifically for UK broadcasts (e.g., BBC, ITV, Channel 4, Sky).
 * **TMDB API (The Movie Database):** Free non-commercial API key. Used for pulling trending titles, deep metadata, posters, and UK "watch providers" (iPlayer, Netflix UK, etc.).
+* **Watchmode API:** Provides granular UK streaming availability (formats, pricing, and direct links) for any TV show or movie.
 
 
 * **On-Device Recommendation Engine:**
@@ -31,9 +32,10 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 * Embeddings are stored in the local Room DB to build an instant personal preference profile.
 
 
-* **3. UK Streaming Deep-Links**
+* **3. UK Streaming Search & Deep-Links**
 * Matches recommendations to availability on UK catch-up services (BBC iPlayer, ITVX, Channel 4, My5).
-* Includes direct deep-link buttons that open the respective UK streaming apps installed on the user's device.
+* A dedicated Search tab powered by Watchmode allows looking up any title to see exactly where it's streamable in the UK, including formats (HD/4K) and rental/purchase prices.
+* Includes direct buttons that open the provider's website or app.
 
 
 * **4. Offline-First "Smart Cache"**

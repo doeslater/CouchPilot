@@ -5,14 +5,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## What this project is
 
 CouchPilot is a local-first, privacy-focused UK TV recommendation app (see `general_idea.md` for the full
-concept: TVmaze/TMDB as free data sources, an on-device recommendation engine, Room for local storage,
+concept: TVmaze/TMDB/Watchmode as free data sources, an on-device recommendation engine, Room for local storage,
 deep-links into UK catch-up apps like iPlayer/ITVX/Channel 4/My5, and no external user accounts).
 
 `ROADMAP.md` tracks the phased build-out from the original bare-template skeleton to the current app — all
-seven planned phases are done. Current shape: three bottom-nav tabs (Tonight — a 7-day UK broadcast schedule
-ranked by on-device taste; Discover — TMDB trending shows filterable by watch provider; Settings — clear all
-local data / reset onboarding), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider
-"open app" buttons and explicit up/downvote, and a plain-Kotlin cosine-similarity recommendation engine fed by
+eight planned phases are done. Current shape: four bottom-nav tabs (Tonight — a 7-day UK broadcast schedule
+ranked by on-device taste; Discover — TMDB trending shows filterable by watch provider; Search — direct
+title lookup for UK streaming availability via Watchmode (bridges to `ShowDetailScreen` for TV shows
+mapped to TMDB); Settings — clear all local data / reset onboarding), a swipe-based onboarding flow,
+a `ShowDetailScreen` with watch-provider "open app" buttons, a Watchmode "check all sources" link,
+and explicit up/downvote, and a plain-Kotlin cosine-similarity recommendation engine fed by
 swipe/vote/dwell-time signals. Firebase AI Logic and the template's "Baking" sample were removed in Phase 1 —
 nothing in `general_idea.md` calls for an AI model, so don't re-add that dependency without a real reason.
 
@@ -40,8 +42,13 @@ skipped).
 
 - **Package root:** `com.example.couchpilot` (applicationId/namespace still uses the default `com.example` prefix
   from project creation — this is a real thing to know when adding new packages, not something to silently "fix").
-- **UI:** Jetpack Compose only (Material3), no XML layouts, no Fragments/Views. Theme lives in `ui/theme/`
-  (`Color.kt`, `Theme.kt`, `Type.kt`), applied at the root via `CouchPilotTheme` in `MainActivity`.
+- **UI:** Jetpack Compose only (Material3), no XML layouts, no Fragments/Views.
+  - **Edge-to-Edge:** fully enabled via `enableEdgeToEdge()` in `MainActivity`. Screens must use
+    `Scaffold` and respect `innerPadding`. Outer `CouchPilotNavHost` handles the root navigation bar
+    insets and uses `consumeWindowInsets(innerPadding)` to prevent redundant padding in nested
+    Scaffolds.
+  - **Theme:** lives in `ui/theme/` (`Color.kt`, `Theme.kt`, `Type.kt`), applied at the root via
+    `CouchPilotTheme` in `MainActivity`.
 - **State pattern:** one `ViewModel` per screen exposing a `StateFlow<UiState>` where `UiState` is a sealed
   interface, collected in the Composable with `collectAsState()`. Every screen's ViewModel self-triggers its
   load in `init {}`, so `Loading` doubles as the initial state and there's no separate `Initial` variant
@@ -50,7 +57,7 @@ skipped).
   screens rather than introducing a different state-management approach.
 - **No Firebase.** Removed in Phase 1 along with the Baking sample — don't re-add `firebase-ai`/`google-services`
   without a real reason; nothing in `general_idea.md` calls for an AI model.
-- **Secrets/API keys** (currently just TMDB) must never be committed — per `general_idea.md`, this repo is
+- **Secrets/API keys** (TMDB and Watchmode) must never be committed — per `general_idea.md`, this repo is
   public and keys are expected to stay out of git entirely.
   - Real values go in `secrets.properties` (gitignored — deliberately separate from the
     machine-specific `local.properties` so it can be synced across your own machines without clobbering
@@ -58,7 +65,7 @@ skipped).
     documenting which keys a new dev needs to fill in.
   - `app/build.gradle.kts` reads `secrets.properties` at configuration time and exposes the values via
     `buildConfigField` (`buildFeatures.buildConfig = true`), so app code reads them as
-    `BuildConfig.TMDB_API_KEY` / `BuildConfig.TMDB_READ_ACCESS_TOKEN` — never read `secrets.properties`
+    `BuildConfig.TMDB_API_KEY` / `BuildConfig.WATCHMODE_API_KEY` / etc — never read `secrets.properties`
     directly from Kotlin/Java code, and never log/print those `BuildConfig` values. If `secrets.properties`
     is missing, the build still succeeds with empty-string values (TMDB calls fail at runtime instead).
     `google-services.json` isn't required at all (Firebase was removed in Phase 1).
@@ -99,9 +106,11 @@ skipped).
   Composables via `hiltViewModel()` — note the import is
   `androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel`, not the `androidx.hilt.navigation.compose` one
   (deprecated as of `hilt-navigation-compose` 1.3.0). Follow this same pattern for new ViewModels/screens.
-- **Networking:** Retrofit + Gson. `core/data/RetrofitFactory.kt` builds a `Retrofit` from a shared
-  `OkHttpClient` (`core/di/NetworkModule.kt`,
-  logging-only, debug builds get `HttpLoggingInterceptor.Level.BODY`) + a feature's base URL; each feature adds
+- **Networking:** Retrofit + Gson. `AppEndpoint.kt` centralizes all base URLs (TMDB, TVmaze,
+  Watchmode), API paths, and UK provider web search paths; follow the pattern of adding full-URL
+  comments for each constant there. `core/data/RetrofitFactory.kt` builds a `Retrofit` from a shared
+  `OkHttpClient` (`core/di/NetworkModule.kt`, logging-only, debug builds get
+  `HttpLoggingInterceptor.Level.BODY`) + a feature's base URL; each feature adds
   auth as a per-request `@Header`, never as a `defaultRequest` on the shared client, so one API's token can't
   leak onto another API's calls. `core/data/SafeCall.kt` (`safeCall { retrofitService.call(...) }`) turns a
   Retrofit `Response<T>` + exceptions into a typed `Result<T, DataError.Network>` — reuse this for any new
@@ -134,7 +143,7 @@ skipped).
   - `core/domain/LocalDataManager.kt` (+ `core/data/DefaultLocalDataManager.kt`) — the one class that
     coordinates wiping both Room (`CouchPilotDatabase.clearAllTables()`) and the DataStore onboarding flag,
     behind a single `clearAllLocalData()` call. Named a "manager," not a repository, since it has no reads.
-  - `tmdb/` and `tvmaze/` are both named/typed as `*Repository` (not `*DataSource`) even though each has only
+  - `tmdb/`, `tvmaze/` and `watchmode/` are both named/typed as `*Repository` (not `*DataSource`) even though each has only
     one remote source today, because each is the seam a local Room cache slots into (and now has) without
     presentation code changing — see general_idea.md's offline-first "Smart Cache" idea. Each repository impl
     is cache-then-refresh: return cached rows if fresh, otherwise hit the network and update the cache.

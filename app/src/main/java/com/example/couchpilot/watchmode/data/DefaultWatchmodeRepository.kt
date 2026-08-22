@@ -27,13 +27,19 @@ class DefaultWatchmodeRepository @Inject constructor(
 
     override suspend fun searchTitles(query: String): Result<List<WatchmodeSearchResult>, DataError> {
         return remoteDataSource.searchTitles(query).map { response ->
-            response.titleResults.map { result ->
-                WatchmodeSearchResult(
-                    id = result.id,
-                    name = result.name,
-                    imageUrl = result.imageUrl
-                )
-            }
+            response.titleResults
+                .map { result ->
+                    WatchmodeSearchResult(
+                        id = result.id,
+                        name = result.name,
+                        imageUrl = result.imageUrl,
+                        isTvShow = result.resultType?.startsWith("tv", ignoreCase = true) == true,
+                        tmdbId = result.tmdbId
+                    )
+                }
+                // This is a TV recommendation app - surface TV matches ahead of movies that share
+                // a name, rather than showing Watchmode's raw (unranked) API order.
+                .sortedByDescending { it.isTvShow }
         }
     }
 }

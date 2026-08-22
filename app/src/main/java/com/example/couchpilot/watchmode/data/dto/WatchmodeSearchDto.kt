@@ -9,7 +9,7 @@ data class WatchmodeSearchResponseDto(
 data class WatchmodeSearchResultDto(
     @SerializedName("id") val id: Int,
     @SerializedName("name") val name: String,
-    @SerializedName("result_type") val resultType: String,
+    @SerializedName("result_type") val resultType: String?,
     @SerializedName("tmdb_id") val tmdbId: Int?,
     @SerializedName("tmdb_type") val tmdbType: String?,
     @SerializedName("image_url") val imageUrl: String?

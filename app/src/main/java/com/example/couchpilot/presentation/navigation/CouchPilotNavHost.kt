@@ -114,9 +114,15 @@ fun CouchPilotNavHost(
                 })
             }
             composable<Route.Search> {
-                SearchScreen(onTitleClick = { id, name ->
-                    navController.navigate(Route.StreamingSources(id.toString(), name))
-                })
+                SearchScreen(
+                    // Watchmode resolved this hit to a TMDB show - route through ShowDetail so it
+                    // gets the same taste-scoring/vote/dwell-time treatment as any other show,
+                    // instead of skipping straight to the granular streaming-sources screen.
+                    onNavigateToShowDetail = { tmdbId -> navController.navigate(Route.ShowDetail(tmdbId)) },
+                    onNavigateToStreamingSources = { titleId, name ->
+                        navController.navigate(Route.StreamingSources(titleId, name))
+                    }
+                )
             }
             composable<Route.Settings> {
                 SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })
