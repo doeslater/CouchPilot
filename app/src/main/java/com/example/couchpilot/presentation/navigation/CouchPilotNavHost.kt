@@ -1,5 +1,9 @@
 package com.example.couchpilot.presentation.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
@@ -91,11 +95,15 @@ fun CouchPilotNavHost(
                 }
             }
         },
+        contentWindowInsets = WindowInsets.navigationBars
     ) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Route.Tonight,
-            modifier = Modifier.padding(innerPadding),
+            modifier = Modifier
+                .padding(innerPadding)
+                .consumeWindowInsets(innerPadding)
+                .imePadding(),
         ) {
             composable<Route.Tonight> {
                 TonightScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })

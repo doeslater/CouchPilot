@@ -1,7 +1,8 @@
 package com.example.couchpilot.watchmode.presentation
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -68,7 +69,10 @@ fun StreamingSourcesScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
+                        LazyColumn(
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = innerPadding
+                        ) {
                             items(state.sources) { source ->
                                 SourceItem(
                                     source = source,

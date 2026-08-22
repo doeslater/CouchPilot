@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -22,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onViewProfile: () -> Unit,
@@ -36,40 +40,43 @@ fun SettingsScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-        Text(
-            text = "CouchPilot keeps everything - your swipe history, cached shows, " +
-                "preferences - on this device only. Nothing is ever sent to an account or a " +
-                "server. You can wipe it all at any time.",
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings") }
+            )
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            Text(
+                text = "CouchPilot keeps everything - your swipe history, cached shows, " +
+                    "preferences - on this device only. Nothing is ever sent to an account or a " +
+                    "server. You can wipe it all at any time.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
 
-        if (uiState.isClearing) {
-            CircularProgressIndicator()
-        } else {
-            OutlinedButton(
-                onClick = onViewProfile,
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            ) {
-                Text("View your taste profile")
-            }
-            OutlinedButton(
-                onClick = { viewModel.retakeOnboarding() },
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
-            ) {
-                Text("Retake taste swipes")
-            }
-            Button(
-                onClick = { showConfirmDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Clear local data & reset onboarding")
+            if (uiState.isClearing) {
+                CircularProgressIndicator()
+            } else {
+                OutlinedButton(
+                    onClick = onViewProfile,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Text("View your taste profile")
+                }
+                OutlinedButton(
+                    onClick = { viewModel.retakeOnboarding() },
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Text("Retake taste swipes")
+                }
+                Button(
+                    onClick = { showConfirmDialog = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Clear local data & reset onboarding")
+                }
             }
         }
     }

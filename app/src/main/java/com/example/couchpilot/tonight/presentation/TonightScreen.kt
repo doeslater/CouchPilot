@@ -16,9 +16,12 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,6 +35,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.example.couchpilot.tvmaze.domain.ScheduleItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TonightScreen(
     onShowClick: (Int) -> Unit,
@@ -39,33 +43,50 @@ fun TonightScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is TonightUiState.Loading -> CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center)
-            )
-            is TonightUiState.Error -> Text(
-                text = state.message,
-                modifier = Modifier.align(Alignment.Center).padding(16.dp)
-            )
-            is TonightUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
-                DaySelector(
-                    days = state.days,
-                    selectedDay = state.selectedDay,
-                    onDayClick = viewModel::selectDay,
-                )
-                if (state.schedule.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Tonight")
                         Text(
-                            text = "No Freeview shows matched for this day.",
-                            modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                            text = "Powered by TVmaze",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
                         )
                     }
-                } else {
-                    ScheduleList(
-                        schedule = state.schedule,
-                        onShowClick = onShowClick
+                }
+            )
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when (val state = uiState) {
+                is TonightUiState.Loading -> CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                is TonightUiState.Error -> Text(
+                    text = state.message,
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp)
+                )
+                is TonightUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
+                    DaySelector(
+                        days = state.days,
+                        selectedDay = state.selectedDay,
+                        onDayClick = viewModel::selectDay,
                     )
+                    if (state.schedule.isEmpty()) {
+                        Box(modifier = Modifier.fillMaxSize()) {
+                            Text(
+                                text = "No Freeview shows matched for this day.",
+                                modifier = Modifier.align(Alignment.Center).padding(16.dp),
+                            )
+                        }
+                    } else {
+                        ScheduleList(
+                            schedule = state.schedule,
+                            onShowClick = onShowClick
+                        )
+                    }
                 }
             }
         }
@@ -79,7 +100,7 @@ private fun DaySelector(
     onDayClick: (DayOption) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(days, key = { it.apiDate }) { day ->

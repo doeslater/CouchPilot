@@ -21,13 +21,16 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,6 +56,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OnboardingScreen(
     onShowInfo: (Int) -> Unit,
@@ -62,104 +66,110 @@ fun OnboardingScreen(
     val scope = rememberCoroutineScope()
     val swipeActions = remember { Channel<Boolean>(Channel.CONFLATED) }
 
-    Box(modifier = Modifier.fillMaxSize().padding(24.dp)) {
-        when (val state = uiState) {
-            is OnboardingUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
-            is OnboardingUiState.Error -> Text(
-                text = state.message,
-                modifier = Modifier.align(Alignment.Center)
-            )
-            is OnboardingUiState.Success -> {
-                if (state.isFinished) {
-                    Text(
-                        text = "Setting up your personal guide...",
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                } else {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Scaffold(
+        topBar = {
+            if (uiState is OnboardingUiState.Success && !(uiState as OnboardingUiState.Success).isFinished) {
+                TopAppBar(
+                    title = { Text("Welcome to CouchPilot") },
+                    actions = {
+                        IconButton(onClick = { viewModel.skipOnboarding() }) {
+                            Icon(Icons.Default.Close, contentDescription = "Skip onboarding")
+                        }
+                    }
+                )
+            }
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when (val state = uiState) {
+                is OnboardingUiState.Loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                is OnboardingUiState.Error -> Text(
+                    text = state.message,
+                    modifier = Modifier.align(Alignment.Center)
+                )
+                is OnboardingUiState.Success -> {
+                    if (state.isFinished) {
                         Text(
-                            text = "Help us learn your taste",
-                            style = MaterialTheme.typography.headlineSmall,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            text = "Setting up your personal guide...",
+                            style = MaterialTheme.typography.headlineMedium,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center)
                         )
-                        Text(
-                            text = "Tap or swipe to decide",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.padding(bottom = 32.dp)
-                        )
-                        
-                        Box(modifier = Modifier.weight(1f)) {
-                            // Show the next card underneath if it exists
-                            state.shows.getOrNull(state.currentIndex + 1)?.let { nextShow ->
-                                ShowCard(show = nextShow, modifier = Modifier.graphicsLayer { alpha = 0.5f; scaleX = 0.9f; scaleY = 0.9f })
-                            }
+                    } else {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(
+                                text = "Help us learn your taste",
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            Text(
+                                text = "Tap or swipe to decide",
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(bottom = 32.dp)
+                            )
                             
-                            state.currentShow?.let { currentShow ->
-                                SwipeableCard(
-                                    show = currentShow,
-                                    onSwiped = { liked -> viewModel.onSwipe(currentShow, liked) },
-                                    externalActions = swipeActions
-                                )
+                            Box(modifier = Modifier.weight(1f)) {
+                                // Show the next card underneath if it exists
+                                state.shows.getOrNull(state.currentIndex + 1)?.let { nextShow ->
+                                    ShowCard(show = nextShow, modifier = Modifier.graphicsLayer { alpha = 0.5f; scaleX = 0.9f; scaleY = 0.9f })
+                                }
+                                
+                                state.currentShow?.let { currentShow ->
+                                    SwipeableCard(
+                                        show = currentShow,
+                                        onSwiped = { liked -> viewModel.onSwipe(currentShow, liked) },
+                                        externalActions = swipeActions
+                                    )
+                                }
                             }
-                        }
 
-                        Row(
-                            modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(32.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            FilledTonalIconButton(
-                                onClick = { scope.launch { swipeActions.send(false) } },
-                                modifier = Modifier.size(64.dp),
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                                    contentColor = MaterialTheme.colorScheme.onErrorContainer
-                                )
+                            Row(
+                                modifier = Modifier.padding(top = 32.dp, bottom = 16.dp),
+                                horizontalArrangement = Arrangement.spacedBy(32.dp),
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(Icons.Default.Close, contentDescription = "Dislike", modifier = Modifier.size(32.dp))
+                                FilledTonalIconButton(
+                                    onClick = { scope.launch { swipeActions.send(false) } },
+                                    modifier = Modifier.size(64.dp),
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                                        contentColor = MaterialTheme.colorScheme.onErrorContainer
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Close, contentDescription = "Dislike", modifier = Modifier.size(32.dp))
+                                }
+
+                                FilledTonalIconButton(
+                                    onClick = { state.currentShow?.id?.let(onShowInfo) },
+                                    modifier = Modifier.size(48.dp),
+                                    shape = CircleShape
+                                ) {
+                                    Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(24.dp))
+                                }
+
+                                FilledTonalIconButton(
+                                    onClick = { scope.launch { swipeActions.send(true) } },
+                                    modifier = Modifier.size(64.dp),
+                                    shape = CircleShape,
+                                    colors = IconButtonDefaults.filledTonalIconButtonColors(
+                                        containerColor = Color(0xFFE91E63).copy(alpha = 0.2f),
+                                        contentColor = Color(0xFFE91E63)
+                                    )
+                                ) {
+                                    Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
+                                }
                             }
 
-                            FilledTonalIconButton(
-                                onClick = { state.currentShow?.id?.let(onShowInfo) },
-                                modifier = Modifier.size(48.dp),
-                                shape = CircleShape
+                            TextButton(
+                                onClick = { viewModel.onSkipShow() },
+                                modifier = Modifier.padding(bottom = 16.dp)
                             ) {
-                                Icon(Icons.Default.Info, contentDescription = "Info", modifier = Modifier.size(24.dp))
+                                Text("Skip Show")
                             }
-
-                            FilledTonalIconButton(
-                                onClick = { scope.launch { swipeActions.send(true) } },
-                                modifier = Modifier.size(64.dp),
-                                shape = CircleShape,
-                                colors = IconButtonDefaults.filledTonalIconButtonColors(
-                                    containerColor = Color(0xFFE91E63).copy(alpha = 0.2f),
-                                    contentColor = Color(0xFFE91E63)
-                                )
-                            ) {
-                                Icon(Icons.Default.Favorite, contentDescription = "Like", modifier = Modifier.size(32.dp))
-                            }
-                        }
-
-                        TextButton(
-                            onClick = { viewModel.onSkipShow() },
-                            modifier = Modifier.padding(bottom = 16.dp)
-                        ) {
-                            Text("Skip Show")
                         }
                     }
                 }
-            }
-        }
-
-        if (uiState is OnboardingUiState.Success && !(uiState as OnboardingUiState.Success).isFinished) {
-            IconButton(
-                onClick = { viewModel.skipOnboarding() },
-                modifier = Modifier.align(Alignment.TopEnd)
-            ) {
-                Icon(Icons.Default.Close, contentDescription = "Skip onboarding")
             }
         }
     }

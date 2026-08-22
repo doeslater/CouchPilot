@@ -11,13 +11,18 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(
     onTitleClick: (Int, String) -> Unit,
@@ -40,53 +46,80 @@ fun SearchScreen(
     var query by remember { mutableStateOf("") }
     val uiState by viewModel.uiState.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                viewModel.onQueryChange(it)
-            },
-            label = { Text("Search titles on Watchmode") },
-            modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-            singleLine = true
-        )
-
-        Box(modifier = Modifier.weight(1f).padding(top = 16.dp)) {
-            when (val state = uiState) {
-                is SearchUiState.Idle -> Text(
-                    text = "Type a show name to find where to watch it.",
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                is SearchUiState.Loading -> CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                is SearchUiState.Error -> Text(
-                    text = state.message,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-                is SearchUiState.Success -> {
-                    if (state.results.isEmpty()) {
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Search")
                         Text(
-                            text = "No results found.",
-                            modifier = Modifier.align(Alignment.Center)
+                            text = "Powered by Watchmode",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
                         )
-                    } else {
-                        LazyColumn(modifier = Modifier.fillMaxSize()) {
-                            items(state.results) { result ->
-                                ListItem(
-                                    headlineContent = { Text(result.name) },
-                                    leadingContent = {
-                                        AsyncImage(
-                                            model = result.imageUrl,
-                                            contentDescription = null,
-                                            contentScale = ContentScale.Crop,
-                                            modifier = Modifier.size(40.dp).clip(CircleShape)
-                                        )
-                                    },
-                                    modifier = Modifier.clickable { onTitleClick(result.id, result.name) }
-                                )
+                    }
+                }
+            )
+        }
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(horizontal = 16.dp)) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = {
+                    query = it
+                    viewModel.onQueryChange(it)
+                },
+                label = { Text("Search titles") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    if (query.isNotEmpty()) {
+                        IconButton(onClick = {
+                            query = ""
+                            viewModel.onQueryChange("")
+                        }) {
+                            Icon(Icons.Default.Close, contentDescription = "Clear search")
+                        }
+                    }
+                },
+                singleLine = true
+            )
+
+            Box(modifier = Modifier.weight(1f).padding(top = 16.dp)) {
+                when (val state = uiState) {
+                    is SearchUiState.Idle -> Text(
+                        text = "Type a show name to find where to watch it.",
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                    is SearchUiState.Loading -> CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                    is SearchUiState.Error -> Text(
+                        text = state.message,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                    is SearchUiState.Success -> {
+                        if (state.results.isEmpty()) {
+                            Text(
+                                text = "No results found.",
+                                modifier = Modifier.align(Alignment.Center)
+                            )
+                        } else {
+                            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                                items(state.results) { result ->
+                                    ListItem(
+                                        headlineContent = { Text(result.name) },
+                                        leadingContent = {
+                                            AsyncImage(
+                                                model = result.imageUrl,
+                                                contentDescription = null,
+                                                contentScale = ContentScale.Crop,
+                                                modifier = Modifier.size(40.dp).clip(CircleShape)
+                                            )
+                                        },
+                                        modifier = Modifier.clickable { onTitleClick(result.id, result.name) }
+                                    )
+                                }
                             }
                         }
                     }

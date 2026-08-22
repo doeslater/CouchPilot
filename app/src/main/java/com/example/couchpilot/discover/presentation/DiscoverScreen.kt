@@ -19,9 +19,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,6 +39,7 @@ import coil3.compose.AsyncImage
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
     // originProviderName is null unless a specific chip (not "All") is selected - lets
@@ -45,28 +49,45 @@ fun DiscoverScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        when (val state = uiState) {
-            is DiscoverUiState.Loading -> CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = {
+                    Column {
+                        Text("Discover")
+                        Text(
+                            text = "Powered by TMDB",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary
+                        )
+                    }
+                }
             )
-            is DiscoverUiState.Error -> Text(
-                text = "Couldn't load trending shows: ${state.message}",
-                modifier = Modifier.align(Alignment.Center).padding(16.dp),
-            )
-            is DiscoverUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
-                ProviderSelector(
-                    providers = state.providers,
-                    selectedId = state.selectedProviderId,
-                    onProviderClick = { viewModel.selectProvider(it) }
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when (val state = uiState) {
+                is DiscoverUiState.Loading -> CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center),
                 )
-                val selectedProviderName = state.providers
-                    .firstOrNull { it.id == state.selectedProviderId }
-                    ?.name
-                TrendingGrid(
-                    shows = state.shows,
-                    onShowClick = { show -> onShowClick(show.id, selectedProviderName) }
+                is DiscoverUiState.Error -> Text(
+                    text = "Couldn't load trending shows: ${state.message}",
+                    modifier = Modifier.align(Alignment.Center).padding(16.dp),
                 )
+                is DiscoverUiState.Success -> Column(modifier = Modifier.fillMaxSize()) {
+                    ProviderSelector(
+                        providers = state.providers,
+                        selectedId = state.selectedProviderId,
+                        onProviderClick = { viewModel.selectProvider(it) }
+                    )
+                    val selectedProviderName = state.providers
+                        .firstOrNull { it.id == state.selectedProviderId }
+                        ?.name
+                    TrendingGrid(
+                        shows = state.shows,
+                        onShowClick = { show -> onShowClick(show.id, selectedProviderName) }
+                    )
+                }
             }
         }
     }
@@ -79,7 +100,7 @@ private fun ProviderSelector(
     onProviderClick: (Int?) -> Unit,
 ) {
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
