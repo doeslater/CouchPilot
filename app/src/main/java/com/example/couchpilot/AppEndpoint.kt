@@ -31,6 +31,9 @@ object AppEndpoint {
 
         // https://api.themoviedb.org/3/tv/popular
         const val POPULAR_TV = "tv/popular"
+
+        // https://api.themoviedb.org/3/search/multi
+        const val SEARCH_MULTI = "search/multi"
     }
 
     object TvMaze {
@@ -54,6 +57,8 @@ object AppEndpoint {
         const val SEARCH = "search/"
         // https://api.watchmode.com/v1/autocomplete-search/
         const val AUTOCOMPLETE = "autocomplete-search/"
+        // https://api.watchmode.com/v1/title/{title_id}/details/
+        const val TITLE_DETAILS = "title/{title_id}/details/"
     }
 
     object WebSearch {

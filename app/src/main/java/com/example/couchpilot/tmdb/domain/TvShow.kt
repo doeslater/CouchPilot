@@ -9,4 +9,5 @@ data class TvShow(
     val voteAverage: Double,
     val firstAirDate: String?,
     val genreIds: List<Int> = emptyList(),
+    val mediaType: String? = "tv"
 )

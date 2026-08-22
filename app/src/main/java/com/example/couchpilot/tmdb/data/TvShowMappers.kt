@@ -2,6 +2,7 @@ package com.example.couchpilot.tmdb.data
 
 import com.example.couchpilot.tmdb.data.dto.TvShowDetailDto
 import com.example.couchpilot.tmdb.data.dto.TvShowDto
+import com.example.couchpilot.tmdb.data.dto.TmdbSearchResultDto
 import com.example.couchpilot.tmdb.data.dto.WatchProviderDto
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
@@ -56,6 +57,17 @@ fun TvShowDetailDto.toEntity(): TvShowEntity = TvShowEntity(
     voteAverage = voteAverage,
     firstAirDate = firstAirDate,
     genreIds = genres.map { it.id }.joinToString(",")
+)
+
+fun TmdbSearchResultDto.toTvShow(): TvShow = TvShow(
+    id = id,
+    name = name ?: title ?: "Unknown",
+    overview = overview ?: "",
+    posterUrl = TmdbImages.posterUrl(posterPath),
+    voteAverage = voteAverage ?: 0.0,
+    firstAirDate = firstAirDate ?: releaseDate,
+    genreIds = emptyList(), // Multi-search results don't include genres by default
+    mediaType = mediaType
 )
 
 fun WatchProviderDto.toWatchProvider(tmdbUrl: String? = null): WatchProvider = WatchProvider(

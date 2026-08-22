@@ -12,5 +12,11 @@ data class WatchmodeSearchResult(
      * a Tonight/Discover result is, instead of only ever reaching the granular Watchmode streaming
      * sources screen. Null means Watchmode couldn't map this title to TMDB.
      */
-    val tmdbId: Int?
+    val tmdbId: Int?,
+    /** Numerical rating score assigned to the title by viewers (0-10). */
+    val userRating: Double? = null,
+    /** Brief summary or plot description of the show. */
+    val overview: String? = null,
+    /** Initial broadcast or release year/date of the title. */
+    val releaseDate: String? = null
 )

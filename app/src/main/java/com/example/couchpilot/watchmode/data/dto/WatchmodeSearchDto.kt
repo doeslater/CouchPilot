@@ -15,5 +15,8 @@ data class WatchmodeSearchResultDto(
     @SerializedName("relevance") val relevance: Double?,
     @SerializedName("tmdb_id") val tmdbId: Int?,
     @SerializedName("tmdb_type") val tmdbType: String?,
-    @SerializedName("image_url") val imageUrl: String?
+    @SerializedName("image_url") val imageUrl: String?,
+    @SerializedName("year") val year: Int?,
+    @SerializedName("user_rating") val userRating: Double?,
+    @SerializedName("plot_overview") val plotOverview: String?
 )

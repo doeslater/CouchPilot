@@ -34,15 +34,49 @@ class DefaultWatchmodeRepository @Inject constructor(
                     name = result.name,
                     imageUrl = result.imageUrl,
                     isTvShow = (result.resultType ?: result.type)?.startsWith("tv", ignoreCase = true) == true,
-                    tmdbId = result.tmdbId
+                    tmdbId = result.tmdbId,
+                    userRating = result.userRating,
+                    overview = result.plotOverview,
+                    releaseDate = result.year?.toString()
                 )
             }
                 // Use a stable sort: prioritize TV shows (CouchPilot's primary focus) but
                 // otherwise preserve the API's relevance ranking for better quality results.
                 .sortedWith(
                     compareByDescending<WatchmodeSearchResult> { it.isTvShow }
-                        .thenBy { 0 } // placeholder to keep it stable if needed, but sortedWith is stable
                 )
+        }
+    }
+
+    override suspend fun getTitleDetails(titleId: String): Result<WatchmodeSearchResult, DataError> {
+        return remoteDataSource.getTitleDetails(titleId).map { result ->
+            WatchmodeSearchResult(
+                id = result.id,
+                name = result.name,
+                imageUrl = result.imageUrl,
+                isTvShow = (result.resultType ?: result.type)?.startsWith("tv", ignoreCase = true) == true,
+                tmdbId = result.tmdbId,
+                userRating = result.userRating,
+                overview = result.plotOverview,
+                releaseDate = result.year?.toString()
+            )
+        }
+    }
+
+    override suspend fun findTitleByExternalId(externalId: String, type: String): Result<WatchmodeSearchResult?, DataError> {
+        return remoteDataSource.findByExternalId(externalId, type).map { response ->
+            response.titleResults?.firstOrNull()?.let { result ->
+                WatchmodeSearchResult(
+                    id = result.id,
+                    name = result.name,
+                    imageUrl = result.imageUrl,
+                    isTvShow = (result.resultType ?: result.type)?.startsWith("tv", ignoreCase = true) == true,
+                    tmdbId = result.tmdbId,
+                    userRating = result.userRating,
+                    overview = result.plotOverview,
+                    releaseDate = result.year?.toString()
+                )
+            }
         }
     }
 }

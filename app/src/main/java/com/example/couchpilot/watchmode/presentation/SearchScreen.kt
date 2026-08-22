@@ -36,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil3.compose.AsyncImage
 
@@ -69,7 +70,7 @@ fun SearchScreen(
                     Column {
                         Text("Search")
                         Text(
-                            text = "Powered by Watchmode",
+                            text = "Search powered by TMDB • Sources by Watchmode",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.secondary
                         )
@@ -126,7 +127,22 @@ fun SearchScreen(
                                     ListItem(
                                         headlineContent = { Text(result.name) },
                                         supportingContent = {
-                                            Text(if (result.isTvShow) "TV Show" else "Movie")
+                                            Column {
+                                                val type = if (result.isTvShow) "TV Show" else "Movie"
+                                                val meta = listOfNotNull(
+                                                    type,
+                                                    result.releaseDate,
+                                                    result.userRating?.let { "★ $it" }
+                                                ).joinToString(" • ")
+                                                Text(meta)
+                                                result.overview?.let {
+                                                    Text(
+                                                        text = it,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        modifier = Modifier.padding(top = 4.dp)
+                                                    )
+                                                }
+                                            }
                                         },
                                         leadingContent = {
                                             AsyncImage(

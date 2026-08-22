@@ -64,4 +64,13 @@ interface TmdbService {
         @Query("page") page: Int = 1,
         @Header("Authorization") authHeader: String
     ): Response<TrendingTvShowsResponseDto>
+
+    @GET(AppEndpoint.Tmdb.SEARCH_MULTI)
+    suspend fun searchMulti(
+        @Query("query") query: String,
+        @Query("language") language: String = "en-GB",
+        @Query("page") page: Int = 1,
+        @Query("include_adult") includeAdult: Boolean = false,
+        @Header("Authorization") authHeader: String
+    ): Response<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto>
 }

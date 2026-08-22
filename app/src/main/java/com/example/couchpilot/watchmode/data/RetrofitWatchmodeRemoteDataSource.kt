@@ -5,6 +5,7 @@ import com.example.couchpilot.core.data.safeCall
 import com.example.couchpilot.core.domain.DataError
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.watchmode.data.dto.WatchmodeSearchResponseDto
+import com.example.couchpilot.watchmode.data.dto.WatchmodeSearchResultDto
 import com.example.couchpilot.watchmode.data.dto.WatchmodeSourceDto
 import javax.inject.Inject
 
@@ -25,6 +26,25 @@ class RetrofitWatchmodeRemoteDataSource @Inject constructor(
             watchmodeService.autocompleteTitles(
                 apiKey = BuildConfig.WATCHMODE_API_KEY,
                 searchValue = query
+            )
+        }
+    }
+
+    suspend fun getTitleDetails(titleId: String): Result<WatchmodeSearchResultDto, DataError.Network> {
+        return safeCall {
+            watchmodeService.getTitleDetails(
+                titleId = titleId,
+                apiKey = BuildConfig.WATCHMODE_API_KEY
+            )
+        }
+    }
+
+    suspend fun findByExternalId(externalId: String, type: String): Result<WatchmodeSearchResponseDto, DataError.Network> {
+        return safeCall {
+            watchmodeService.findByExternalId(
+                apiKey = BuildConfig.WATCHMODE_API_KEY,
+                searchField = type,
+                searchValue = externalId
             )
         }
     }

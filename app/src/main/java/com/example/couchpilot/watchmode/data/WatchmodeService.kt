@@ -31,4 +31,18 @@ interface WatchmodeService {
         @Query("search_type") searchType: Int = 2, // 2 = Titles Only
         @Query("regions") regions: String = DEFAULT_REGION
     ): Response<com.example.couchpilot.watchmode.data.dto.WatchmodeSearchResponseDto>
+
+    @GET(AppEndpoint.Watchmode.TITLE_DETAILS)
+    suspend fun getTitleDetails(
+        @Path("title_id") titleId: String,
+        @Query("apiKey") apiKey: String,
+        @Query("append_to_response") appendToResponse: String? = null
+    ): Response<com.example.couchpilot.watchmode.data.dto.WatchmodeSearchResultDto>
+
+    @GET(AppEndpoint.Watchmode.SEARCH)
+    suspend fun findByExternalId(
+        @Query("apiKey") apiKey: String,
+        @Query("search_field") searchField: String,
+        @Query("search_value") searchValue: String
+    ): Response<com.example.couchpilot.watchmode.data.dto.WatchmodeSearchResponseDto>
 }

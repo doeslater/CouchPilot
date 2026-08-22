@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.couchpilot.AppEndpoint
 import com.example.couchpilot.core.domain.onFailure
 import com.example.couchpilot.core.domain.onSuccess
+import com.example.couchpilot.tmdb.domain.TmdbRepository
 import com.example.couchpilot.watchmode.domain.WatchmodeRepository
 import com.example.couchpilot.watchmode.domain.WatchmodeSearchResult
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,7 +34,8 @@ private const val MIN_QUERY_LENGTH = 2
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val watchmodeRepository: WatchmodeRepository
+    private val watchmodeRepository: WatchmodeRepository,
+    private val tmdbRepository: TmdbRepository
 ) : ViewModel() {
 
     private val _query = MutableStateFlow("")
@@ -62,8 +64,23 @@ class SearchViewModel @Inject constructor(
                     flow<SearchUiState> {
                         emit(SearchUiState.Loading)
                         var next: SearchUiState = SearchUiState.Idle
-                        watchmodeRepository.searchTitles(query)
-                            .onSuccess { results -> next = SearchUiState.Success(results) }
+                        tmdbRepository.search(query)
+                            .onSuccess { results ->
+                                next = SearchUiState.Success(
+                                    results.map { show ->
+                                        WatchmodeSearchResult(
+                                            id = 0, // Not available from TMDB search
+                                            name = show.name,
+                                            imageUrl = show.posterUrl,
+                                            isTvShow = show.mediaType == "tv",
+                                            tmdbId = show.id,
+                                            userRating = show.voteAverage,
+                                            overview = show.overview,
+                                            releaseDate = show.firstAirDate?.take(4)
+                                        )
+                                    }
+                                )
+                            }
                             .onFailure { error -> next = SearchUiState.Error(error.toString()) }
                         emit(next)
                     }
@@ -89,22 +106,43 @@ class SearchViewModel @Inject constructor(
     fun onResultClick(result: WatchmodeSearchResult) {
         viewModelScope.launch {
             _checkingResultId.value = result.id
-            watchmodeRepository.getStreamingSources(result.id.toString())
+            // If we don't have the Watchmode ID yet (because search was via TMDB), we need to find it first.
+            val watchmodeId = if (result.id == 0 && result.tmdbId != null) {
+                findWatchmodeId(result.tmdbId, result.isTvShow)
+            } else {
+                result.id.toString()
+            }
+
+            if (watchmodeId == null) {
+                _navigationEvents.send(SearchNavigationEvent.ToImdb(imdbSearchUrl(result.name)))
+                _checkingResultId.value = null
+                return@launch
+            }
+
+            watchmodeRepository.getStreamingSources(watchmodeId)
                 .onSuccess { sources ->
                     val event = if (sources.isEmpty()) {
                         SearchNavigationEvent.ToImdb(imdbSearchUrl(result.name))
                     } else {
-                        defaultDestination(result)
+                        defaultDestination(result.copy(id = watchmodeId.toInt()))
                     }
                     _navigationEvents.send(event)
                 }
                 .onFailure {
                     // Couldn't confirm availability either way - fail open rather than swallow
                     // the tap, and let the destination screen surface its own error state.
-                    _navigationEvents.send(defaultDestination(result))
+                    _navigationEvents.send(defaultDestination(result.copy(id = watchmodeId.toInt())))
                 }
             _checkingResultId.value = null
         }
+    }
+
+    private suspend fun findWatchmodeId(tmdbId: Int, isTvShow: Boolean): String? {
+        val type = if (isTvShow) "tmdb_tv_id" else "tmdb_movie_id"
+        var foundId: String? = null
+        watchmodeRepository.findTitleByExternalId(tmdbId.toString(), type)
+            .onSuccess { result -> foundId = result?.id?.toString() }
+        return foundId
     }
 
     private fun defaultDestination(result: WatchmodeSearchResult): SearchNavigationEvent {

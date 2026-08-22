@@ -93,6 +93,14 @@ class DefaultTmdbRepository @Inject constructor(
         }
     }
 
+    override suspend fun search(query: String): Result<List<TvShow>, DataError> {
+        return remoteDataSource.searchMulti(query).map { dto ->
+            dto.results
+                .filter { it.mediaType == "tv" || it.mediaType == "movie" }
+                .map { it.toTvShow() }
+        }
+    }
+
     private fun WatchProvider.priorityRank(): Int {
         return when {
             name.contains("BBC", ignoreCase = true) -> 0

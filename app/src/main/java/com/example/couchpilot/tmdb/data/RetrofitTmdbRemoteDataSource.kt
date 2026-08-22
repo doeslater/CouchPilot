@@ -70,4 +70,13 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
             )
         }
     }
+
+    suspend fun searchMulti(query: String): Result<com.example.couchpilot.tmdb.data.dto.TmdbSearchResponseDto, DataError.Network> {
+        return safeCall {
+            tmdbService.searchMulti(
+                query = query,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
 }
