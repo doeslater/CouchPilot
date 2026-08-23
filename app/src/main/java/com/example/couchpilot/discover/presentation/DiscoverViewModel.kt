@@ -12,8 +12,6 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -37,6 +35,14 @@ class DiscoverViewModel @Inject constructor(
     // one instead of letting an out-of-order response overwrite the newer selection.
     private var loadTrendingJob: Job? = null
 
+    // Guards loadCollectionShows() against firing the same query twice - a collection's row
+    // composable can enter composition more than once (e.g. scrolled far away and back, which
+    // disposes and later recreates offscreen Lazy items), but the network call itself should only
+    // ever happen once per collection. Keyed by title (unique across UK_CULTURE_COLLECTIONS,
+    // regardless of whether the collection is genre- or network-based) rather than genreId, since
+    // a network-based collection has no genreId at all.
+    private val requestedTitles = mutableSetOf<String>()
+
     init {
         loadInitialData()
     }
@@ -47,6 +53,10 @@ class DiscoverViewModel @Inject constructor(
 
             // Providers and trending shows are independent calls - fetch them concurrently
             // (not one after the other) so the spinner shows for max(latency), not the sum.
+            // Collections are NOT fetched here - each is defined instantly with shows = null and
+            // only actually queried once its row scrolls into view (see loadCollectionShows()),
+            // so opening Discover doesn't fire 8 genre-discover calls whether or not the user
+            // ever scrolls down to see them.
             val providersDeferred = async {
                 tmdbRepository.getWatchProviders()
                     .onSuccess { providers -> allProviders = providers }
@@ -56,10 +66,8 @@ class DiscoverViewModel @Inject constructor(
                         Log.w(TAG, "Failed to load watch providers, filter chips will be empty: $error")
                     }
             }
-            val collectionsDeferred = async { loadCollections() }
             val showsResult = tmdbRepository.getTrendingTvShows(null)
             providersDeferred.await()
-            val collections = collectionsDeferred.await()
 
             showsResult
                 .onSuccess { shows ->
@@ -67,29 +75,41 @@ class DiscoverViewModel @Inject constructor(
                         shows = shows,
                         providers = allProviders,
                         selectedProviderId = null,
-                        collections = collections,
+                        collections = UK_CULTURE_COLLECTIONS.map {
+                            DiscoverCollection(it.title, it.minVoteCount, it.genreId, it.networkId)
+                        },
                     )
                 }
                 .onFailure { error -> _uiState.value = DiscoverUiState.Error(error.toString()) }
         }
     }
 
-    /** Resolves every [UK_CULTURE_COLLECTIONS] entry via TMDB's genre discover query, concurrently
-     *  across collections. A collection whose query fails is dropped (empty), not fatal to the
-     *  other collections or the whole screen; results are capped to keep each row a reasonable
-     *  scroll length rather than a full 20-item TMDB page. */
-    private suspend fun loadCollections(): List<DiscoverCollection> = coroutineScope {
-        UK_CULTURE_COLLECTIONS.map { collection ->
-            async {
-                val shows = when (
-                    val result = tmdbRepository.discoverByGenre(collection.genreId, collection.minVoteCount)
-                ) {
-                    is Result.Success -> result.data.take(COLLECTION_SHOW_LIMIT)
-                    is Result.Error -> emptyList()
-                }
-                DiscoverCollection(collection.title, shows)
+    /** Resolves one collection's shows via TMDB's genre- or network-discover query (whichever
+     *  [DiscoverCollection] actually carries), the first time its row actually enters composition
+     *  (DiscoverScreen's `CollectionRow`). A query that fails leaves the collection with an empty
+     *  (not null) list, so the row hides rather than spinning forever; results are capped to keep
+     *  the row a reasonable scroll length rather than a full 20-item TMDB page. */
+    fun loadCollectionShows(collection: DiscoverCollection) {
+        if (!requestedTitles.add(collection.title)) return
+
+        viewModelScope.launch {
+            val result = when {
+                collection.genreId != null -> tmdbRepository.discoverByGenre(collection.genreId, collection.minVoteCount)
+                collection.networkId != null -> tmdbRepository.discoverByNetwork(collection.networkId, collection.minVoteCount)
+                else -> Result.Success(emptyList())
             }
-        }.awaitAll()
+            val shows = when (result) {
+                is Result.Success -> result.data.take(COLLECTION_SHOW_LIMIT)
+                is Result.Error -> emptyList()
+            }
+            _uiState.update { state ->
+                if (state is DiscoverUiState.Success) {
+                    state.copy(collections = state.collections.map {
+                        if (it.title == collection.title) it.copy(shows = shows) else it
+                    })
+                } else state
+            }
+        }
     }
 
     fun selectProvider(providerId: Int?) {

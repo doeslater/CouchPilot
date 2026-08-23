@@ -89,4 +89,34 @@ class DefaultTmdbRepositoryTest {
 
         coVerify(exactly = 0) { scorer.computePreferenceVector() }
     }
+
+    @Test
+    fun `discoverByNetwork maps the remote response to domain shows`() = runBlocking {
+        coEvery { remoteDataSource.discoverTvByNetwork(networkId = 9, minVoteCount = 100) } returns Result.Success(
+            TrendingTvShowsResponseDto(
+                results = listOf(
+                    com.example.couchpilot.tmdb.data.dto.TvShowDto(
+                        id = 33907, name = "Downton Abbey", overview = "O", posterPath = null,
+                        voteAverage = 8.1, firstAirDate = "2010", genreIds = listOf(18)
+                    )
+                )
+            )
+        )
+
+        val result = repository.discoverByNetwork(networkId = 9, minVoteCount = 100)
+
+        assertTrue(result is Result.Success)
+        assertEquals("Downton Abbey", (result as Result.Success).data.first().name)
+    }
+
+    @Test
+    fun `discoverByNetwork does not apply taste-based ranking`() = runBlocking {
+        coEvery { remoteDataSource.discoverTvByNetwork(networkId = 26, minVoteCount = 100) } returns Result.Success(
+            TrendingTvShowsResponseDto(results = emptyList())
+        )
+
+        repository.discoverByNetwork(networkId = 26, minVoteCount = 100)
+
+        coVerify(exactly = 0) { scorer.computePreferenceVector() }
+    }
 }

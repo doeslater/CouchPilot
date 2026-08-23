@@ -44,6 +44,18 @@ interface TmdbService {
         @Header("Authorization") authHeader: String
     ): Response<TrendingTvShowsResponseDto>
 
+    // Sibling to discoverTvByGenre above, not a shared method with an optional genre/network
+    // param - a broadcaster-based collection (e.g. "Best of ITV") has no with_origin_country
+    // filter at all (with_networks already implies a UK broadcaster), so the two query shapes
+    // genuinely differ rather than just adding one more param to the same call.
+    @GET(AppEndpoint.Tmdb.DISCOVER_TV)
+    suspend fun discoverTvByNetwork(
+        @Query("with_networks") networkId: Int,
+        @Query("vote_count.gte") minVoteCount: Int,
+        @Query("sort_by") sortBy: String = "vote_average.desc",
+        @Header("Authorization") authHeader: String
+    ): Response<TrendingTvShowsResponseDto>
+
     @GET(AppEndpoint.Tmdb.FIND_EXTERNAL)
     suspend fun findByExternalId(
         @Path("external_id") externalId: String,

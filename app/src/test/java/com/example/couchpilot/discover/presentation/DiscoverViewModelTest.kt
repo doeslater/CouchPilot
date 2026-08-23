@@ -33,9 +33,10 @@ class DiscoverViewModelTest {
     @Before
     fun setup() {
         Dispatchers.setMain(UnconfinedTestDispatcher())
-        // Default: every collection's genre discover query returns nothing, so existing tests
-        // below (which don't care about collections) don't need to stub each genre individually.
+        // Default: every collection's genre/network discover query returns nothing, in case a
+        // test below triggers loadCollectionShows() without caring about the result.
         coEvery { tmdbRepository.discoverByGenre(any(), any()) } returns Result.Success(emptyList())
+        coEvery { tmdbRepository.discoverByNetwork(any(), any()) } returns Result.Success(emptyList())
     }
 
     @After
@@ -130,54 +131,116 @@ class DiscoverViewModelTest {
     }
 
     @Test
-    fun `curated collections are hydrated via the genre discover query`() {
+    fun `collections are defined immediately with no shows loaded, and no query fires yet`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-        val firstCollection = UK_CULTURE_COLLECTIONS.first()
+
+        val viewModel = buildViewModel()
+
+        val state = viewModel.uiState.value as DiscoverUiState.Success
+        assertEquals(UK_CULTURE_COLLECTIONS.size, state.collections.size)
+        assertTrue(state.collections.all { it.shows == null })
+        coVerify(exactly = 0) { tmdbRepository.discoverByGenre(any(), any()) }
+        coVerify(exactly = 0) { tmdbRepository.discoverByNetwork(any(), any()) }
+    }
+
+    @Test
+    fun `loadCollectionShows hydrates only the requested genre-based collection`() {
+        coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+        coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
         val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
         coEvery {
-            tmdbRepository.discoverByGenre(firstCollection.genreId, firstCollection.minVoteCount)
+            tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
         } returns Result.Success(listOf(resolvedShow))
-
         val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }
+
+        viewModel.loadCollectionShows(discoverCollection)
 
         val state = viewModel.uiState.value as DiscoverUiState.Success
-        val hydrated = state.collections.first { it.title == firstCollection.title }
+        val hydrated = state.collections.first { it.title == genreCollection.title }
         assertEquals(listOf(resolvedShow), hydrated.shows)
+        // every other collection is still unrequested
+        assertTrue(state.collections.filter { it.title != genreCollection.title }.all { it.shows == null })
     }
 
     @Test
-    fun `a collection whose genre query fails is empty, not fatal to the screen`() {
+    fun `loadCollectionShows hydrates a network-based collection via discoverByNetwork, not discoverByGenre`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-        val firstCollection = UK_CULTURE_COLLECTIONS.first()
+        val networkCollection = UK_CULTURE_COLLECTIONS.first { it.networkId != null }
+        val resolvedShow = TvShow(9, "Real ITV Show", "O", null, 8.0, "2020", emptyList())
         coEvery {
-            tmdbRepository.discoverByGenre(firstCollection.genreId, firstCollection.minVoteCount)
-        } returns Result.Error(DataError.Network.SERVER_ERROR)
-
+            tmdbRepository.discoverByNetwork(networkCollection.networkId!!, networkCollection.minVoteCount)
+        } returns Result.Success(listOf(resolvedShow))
         val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == networkCollection.title }
+
+        viewModel.loadCollectionShows(discoverCollection)
 
         val state = viewModel.uiState.value as DiscoverUiState.Success
-        assertTrue(state.collections.first { it.title == firstCollection.title }.shows.isEmpty())
+        assertEquals(listOf(resolvedShow), state.collections.first { it.title == networkCollection.title }.shows)
+        coVerify(exactly = 0) { tmdbRepository.discoverByGenre(any(), any()) }
     }
 
     @Test
-    fun `collections survive a provider filter change`() {
+    fun `loadCollectionShows only fires the query once per collection`() {
+        coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+        coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
+        val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }
+
+        viewModel.loadCollectionShows(discoverCollection)
+        viewModel.loadCollectionShows(discoverCollection)
+
+        coVerify(exactly = 1) {
+            tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
+        }
+    }
+
+    @Test
+    fun `a collection whose query fails ends up empty, not fatal to the screen`() {
+        coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+        coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
+        coEvery {
+            tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
+        } returns Result.Error(DataError.Network.SERVER_ERROR)
+        val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }
+
+        viewModel.loadCollectionShows(discoverCollection)
+
+        val state = viewModel.uiState.value as DiscoverUiState.Success
+        assertEquals(emptyList<TvShow>(), state.collections.first { it.title == genreCollection.title }.shows)
+    }
+
+    @Test
+    fun `collections survive a provider filter change, including any shows already loaded`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
         coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } returns Result.Success(emptyList())
-        val firstCollection = UK_CULTURE_COLLECTIONS.first()
+        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
         val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
         coEvery {
-            tmdbRepository.discoverByGenre(firstCollection.genreId, firstCollection.minVoteCount)
+            tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
         } returns Result.Success(listOf(resolvedShow))
-
         val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }
+        viewModel.loadCollectionShows(discoverCollection)
         val collectionsBefore = (viewModel.uiState.value as DiscoverUiState.Success).collections
+
         viewModel.selectProvider(netflix.id)
 
         val state = viewModel.uiState.value as DiscoverUiState.Success
         assertEquals(collectionsBefore, state.collections)
-        assertTrue(state.collections.any { it.shows.isNotEmpty() })
+        assertTrue(state.collections.any { it.shows?.isNotEmpty() == true })
     }
 }

@@ -28,6 +28,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -104,7 +105,11 @@ fun DiscoverScreen(
                         // Collection rows aren't provider-chip-scoped, so a tap from one never
                         // carries an originProviderName CTA - only the grid below does.
                         onCollectionShowClick = { show -> onShowClick(show.id, null) },
-                        onShowClick = { show -> onShowClick(show.id, selectedProviderName) }
+                        onShowClick = { show -> onShowClick(show.id, selectedProviderName) },
+                        // Fires once a collection row actually scrolls into (or starts near) the
+                        // viewport - see loadCollectionShows()'s doc for why this isn't fetched
+                        // upfront for all 8 collections.
+                        onCollectionVisible = viewModel::loadCollectionShows
                     )
                 }
             }
@@ -176,6 +181,7 @@ private fun TrendingGrid(
     shows: List<TvShow>,
     onCollectionShowClick: (TvShow) -> Unit,
     onShowClick: (TvShow) -> Unit,
+    onCollectionVisible: (DiscoverCollection) -> Unit,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -185,9 +191,16 @@ private fun TrendingGrid(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         collections.forEach { collection ->
-            if (collection.shows.isNotEmpty()) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    CollectionRow(collection = collection, onShowClick = onCollectionShowClick)
+            // null = not loaded yet (show a loading row); non-null-and-empty = loaded but found
+            // nothing (or the query failed) - hide the row entirely rather than showing a shelf
+            // with nothing in it.
+            if (collection.shows == null || collection.shows.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }, key = "collection-${collection.title}") {
+                    CollectionRow(
+                        collection = collection,
+                        onShowClick = onCollectionShowClick,
+                        onVisible = onCollectionVisible
+                    )
                 }
             }
         }
@@ -204,23 +217,39 @@ private fun TrendingGrid(
 private fun CollectionRow(
     collection: DiscoverCollection,
     onShowClick: (TvShow) -> Unit,
+    onVisible: (DiscoverCollection) -> Unit,
 ) {
+    // Fires once this row actually enters composition - which, inside a LazyVerticalGrid, only
+    // happens once it's visible or about to be (within Compose's own prefetch window), not for
+    // every collection just because it's defined. Keyed on title (stable across recompositions of
+    // the same collection, and unique whether it's genre- or network-based) rather than the
+    // collection object itself, whose `shows` field will change once loaded and would otherwise be
+    // treated as a "new" key.
+    LaunchedEffect(collection.title) { onVisible(collection) }
+
     Column {
         Text(
             text = collection.title,
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
         )
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            items(collection.shows, key = { it.id }) { show ->
-                ShowPoster(
-                    show = show,
-                    modifier = Modifier
-                        .width(110.dp)
-                        .clickable { onShowClick(show) }
-                )
+        if (collection.shows == null) {
+            CircularProgressIndicator(
+                modifier = Modifier.padding(vertical = 16.dp).size(24.dp),
+                strokeWidth = 2.dp
+            )
+        } else {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                items(collection.shows, key = { it.id }) { show ->
+                    ShowPoster(
+                        show = show,
+                        modifier = Modifier
+                            .width(110.dp)
+                            .clickable { onShowClick(show) }
+                    )
+                }
             }
         }
     }

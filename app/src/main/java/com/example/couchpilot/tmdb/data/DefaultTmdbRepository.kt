@@ -104,6 +104,13 @@ class DefaultTmdbRepository @Inject constructor(
         }
     }
 
+    // Same "not personalized" reasoning as discoverByGenre above.
+    override suspend fun discoverByNetwork(networkId: Int, minVoteCount: Int): Result<List<TvShow>, DataError> {
+        return remoteDataSource.discoverTvByNetwork(networkId, minVoteCount).map { dto ->
+            dto.results.map { it.toTvShow() }
+        }
+    }
+
     override suspend fun search(query: String): Result<List<TvShow>, DataError> = coroutineScope {
         val tvDeferred = async { remoteDataSource.searchTv(query) }
         val movieDeferred = async { remoteDataSource.searchMovie(query) }

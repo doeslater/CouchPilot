@@ -3,10 +3,22 @@ package com.example.couchpilot.discover.presentation
 import com.example.couchpilot.tmdb.domain.TvShow
 import com.example.couchpilot.tmdb.domain.WatchProvider
 
-/** A resolved [com.example.couchpilot.discover.domain.UkCultureCollection] - real [TvShow]s from
- *  TMDB's genre discover query. Empty (not an error) if that query fails, so one bad collection
- *  doesn't take down the whole screen. */
-data class DiscoverCollection(val title: String, val shows: List<TvShow>)
+/** A [com.example.couchpilot.discover.domain.UkCultureCollection], lazily resolved - [shows] is
+ *  null until its row actually scrolls into view (see DiscoverScreen's `LaunchedEffect` in
+ *  `CollectionRow`), so the collections don't all fire a network call on screen load just because
+ *  they're defined. Empty (not null) means the query ran and found nothing, or failed - either way
+ *  the row hides itself rather than showing an empty shelf or an error that would take down the
+ *  whole screen. [title] is the stable identity used both as the Lazy grid item key and to guard
+ *  against double-fetching (see DiscoverViewModel.loadCollectionShows) - it's unique across
+ *  [com.example.couchpilot.discover.domain.UK_CULTURE_COLLECTIONS] whether the collection is
+ *  genre- or network-based. */
+data class DiscoverCollection(
+    val title: String,
+    val minVoteCount: Int,
+    val genreId: Int? = null,
+    val networkId: Int? = null,
+    val shows: List<TvShow>? = null,
+)
 
 sealed interface DiscoverUiState {
     data object Loading : DiscoverUiState
