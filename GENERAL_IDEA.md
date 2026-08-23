@@ -47,6 +47,11 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 * A heart toggle on a show's detail screen saves it to a local "Bookmarks" list, browsable from its own bottom-nav tab.
 * Kept deliberately separate from the up/downvote taste signal — bookmarking means "I want to come back to this," not a genre preference, so it doesn't feed the recommendation engine.
 
+* **7. Watchlist & Provider Toggle**
+* A "Manage your subscriptions" screen (off Settings) lets you tick which UK streaming services you actually pay for.
+* On a show's detail page, providers you haven't ticked are greyed out and labeled "Not in your plan" — de-emphasized, not hidden, since a show might still be worth knowing about even on a service you don't currently subscribe to.
+* Scoped to the detail page only: Discover's and Tonight's show lists don't carry per-item provider data, so filtering those would need an expensive per-show lookup neither screen makes today — see `ROADMAP.md`'s writeup for the full reasoning.
+
 **Development Notes**
 
 * Load Android API skills when working on platform-specific code.
@@ -109,7 +114,8 @@ listed below as a freemium alternative worth knowing about if Watchmode's free t
 
 Ideas for future phases, grouped by theme and deduplicated from earlier brainstorming — the current app only
 implements the "Core Concept Ideas & Features" above (see `ROADMAP.md` for what's actually built).
-Backlog items move up into that list once they ship, as Bookmarking (item 6) just did.
+Backlog items move up into that list once they ship, as Bookmarking (item 6) and Watchlist &
+Provider Toggle (item 7) just did.
 
 ### Discovery & Curation
 
@@ -141,7 +147,6 @@ Backlog items move up into that list once they ship, as Bookmarking (item 6) jus
 
 ### Compliance, Personalization & Alerts
 
-* **Watchlist & Provider Toggle:** Users tick off streaming subscriptions they pay for so the app hides content locked behind paywalls they don't have.
 * **Post-Watershed & BBFC/Ofcom Controls:** Filters recommendations using Ofcom watershed rules and official BBFC ratings (U, PG, 12, 15, 18); mature content can stay locked until after 21:00 unless unlocked via biometric auth.
 * **"Ditch or Keep" Prompt:** If a user stops halfway through an episode or film, ask whether to keep it active or drop it from recommendations.
 * **Series Return Notifications:** Alerts when a new series of a saved favorite drops (e.g., *The Traitors*, *Line of Duty*, *Doctor Who*).

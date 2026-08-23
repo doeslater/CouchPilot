@@ -29,6 +29,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 @Composable
 fun SettingsScreen(
     onViewProfile: () -> Unit,
+    onManageSubscriptions: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -64,6 +65,12 @@ fun SettingsScreen(
                     modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                 ) {
                     Text("View your taste profile")
+                }
+                OutlinedButton(
+                    onClick = onManageSubscriptions,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Text("Manage your subscriptions")
                 }
                 OutlinedButton(
                     onClick = { viewModel.retakeOnboarding() },

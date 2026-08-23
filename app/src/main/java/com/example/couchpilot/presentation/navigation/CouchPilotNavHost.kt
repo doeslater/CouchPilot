@@ -37,6 +37,7 @@ import com.example.couchpilot.presentation.MainViewModel
 import com.example.couchpilot.profile.presentation.ProfileScreen
 import com.example.couchpilot.settings.presentation.SettingsScreen
 import com.example.couchpilot.showdetail.presentation.ShowDetailScreen
+import com.example.couchpilot.subscriptions.presentation.SubscriptionsScreen
 import com.example.couchpilot.tonight.presentation.TonightScreen
 import com.example.couchpilot.watchmode.presentation.SearchScreen
 
@@ -125,10 +126,16 @@ fun CouchPilotNavHost(
                 BookmarksScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
             }
             composable<Route.Settings> {
-                SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })
+                SettingsScreen(
+                    onViewProfile = { navController.navigate(Route.Profile) },
+                    onManageSubscriptions = { navController.navigate(Route.Subscriptions) }
+                )
             }
             composable<Route.Profile> {
                 ProfileScreen(onBack = { navController.popBackStack() })
+            }
+            composable<Route.Subscriptions> {
+                SubscriptionsScreen(onBack = { navController.popBackStack() })
             }
             composable<Route.Onboarding> {
                 OnboardingScreen(onShowInfo = { id -> navController.navigate(Route.ShowDetail(id)) }) 

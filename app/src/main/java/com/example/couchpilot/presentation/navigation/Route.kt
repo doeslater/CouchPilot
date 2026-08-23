@@ -38,4 +38,9 @@ sealed interface Route {
     /** Detail-style screen reached from Settings, not a bottom-nav tab. */
     @Serializable
     data object Profile : Route
+
+    /** Detail-style screen reached from Settings, not a bottom-nav tab - tick which UK streaming
+     *  services you actually pay for; see PreferencesRepository.subscribedProviderIds. */
+    @Serializable
+    data object Subscriptions : Route
 }

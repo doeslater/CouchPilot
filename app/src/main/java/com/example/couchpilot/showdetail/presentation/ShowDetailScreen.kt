@@ -30,6 +30,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -81,6 +82,7 @@ fun ShowDetailScreen(
                         userVote = state.userVote,
                         originProviderName = state.originProviderName,
                         isBookmarked = state.isBookmarked,
+                        subscribedProviderIds = state.subscribedProviderIds,
                         onProviderClick = { viewModel.onProviderClick(context, it) },
                         onOriginProviderClick = { viewModel.onOriginProviderClick(context) },
                         onVote = viewModel::onVote,
@@ -99,6 +101,7 @@ private fun ShowDetailContent(
     userVote: Boolean?,
     originProviderName: String?,
     isBookmarked: Boolean,
+    subscribedProviderIds: Set<Int>,
     onProviderClick: (WatchProvider) -> Unit,
     onOriginProviderClick: () -> Unit,
     onVote: (Boolean) -> Unit,
@@ -198,8 +201,15 @@ private fun ShowDetailContent(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)
                 )
+                // An empty subscribedProviderIds means "not configured yet" - don't de-emphasize
+                // anything until the user has actually ticked at least one service in Settings.
+                val hasConfiguredSubscriptions = subscribedProviderIds.isNotEmpty()
                 providers.forEach { provider ->
-                    ProviderRow(provider, onProviderClick)
+                    ProviderRow(
+                        provider = provider,
+                        onProviderClick = onProviderClick,
+                        isSubscribed = !hasConfiguredSubscriptions || provider.id in subscribedProviderIds
+                    )
                 }
             }
             Spacer(modifier = Modifier.size(32.dp))
@@ -210,12 +220,16 @@ private fun ShowDetailContent(
 @Composable
 private fun ProviderRow(
     provider: WatchProvider,
-    onProviderClick: (WatchProvider) -> Unit
+    onProviderClick: (WatchProvider) -> Unit,
+    isSubscribed: Boolean
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp)
+            // De-emphasize rather than hide - a show might still be worth knowing about even on
+            // a service the user hasn't ticked in Settings (see SubscriptionsScreen).
+            .alpha(if (isSubscribed) 1f else 0.5f),
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
@@ -225,13 +239,20 @@ private fun ProviderRow(
                 .size(40.dp)
                 .clip(CircleShape)
         )
-        Text(
-            text = provider.name,
+        Column(
             modifier = Modifier
                 .padding(start = 16.dp)
-                .weight(1f),
-            style = MaterialTheme.typography.bodyLarge
-        )
+                .weight(1f)
+        ) {
+            Text(provider.name, style = MaterialTheme.typography.bodyLarge)
+            if (!isSubscribed) {
+                Text(
+                    text = "Not in your plan",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+            }
+        }
         Button(onClick = { onProviderClick(provider) }) {
             Text("Open")
         }

@@ -18,7 +18,11 @@ sealed interface ShowDetailUiState {
         val originProviderName: String? = null,
         // Loaded alongside the show/providers in loadShowDetails() and flipped by
         // onToggleBookmark() - independent of userVote, since "save for later" isn't a taste signal.
-        val isBookmarked: Boolean = false
+        val isBookmarked: Boolean = false,
+        // Snapshot of PreferencesRepository.subscribedProviderIds at load time. Empty means "not
+        // configured yet," not "subscribed to nothing" - ShowDetailScreen treats empty as "don't
+        // de-emphasize any provider," only greying out rows once the user has ticked at least one.
+        val subscribedProviderIds: Set<Int> = emptySet()
     ) : ShowDetailUiState
     data class Error(val message: String) : ShowDetailUiState
 }

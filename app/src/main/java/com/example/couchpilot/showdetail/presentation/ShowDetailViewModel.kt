@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.example.couchpilot.bookmarks.data.local.BookmarkDao
 import com.example.couchpilot.bookmarks.data.local.BookmarkEntity
+import com.example.couchpilot.core.data.PreferencesRepository
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.onboarding.data.local.SwipeEventDao
 import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
@@ -19,6 +20,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -36,8 +38,9 @@ class ShowDetailViewModel internal constructor(
     private val appLauncher: AppLauncher,
     private val swipeEventDao: SwipeEventDao,
     private val bookmarkDao: BookmarkDao,
+    private val preferencesRepository: PreferencesRepository,
     // Trailing + defaulted so the existing (showId, tmdbRepository, appLauncher, swipeEventDao,
-    // bookmarkDao) positional test call sites keep compiling unchanged.
+    // bookmarkDao, preferencesRepository) positional test call sites keep compiling unchanged.
     private val originProviderName: String? = null
 ) : ViewModel() {
     // savedStateHandle.toRoute() decodes route args via a real android.os.Bundle round-trip,
@@ -50,13 +53,15 @@ class ShowDetailViewModel internal constructor(
         tmdbRepository: TmdbRepository,
         appLauncher: AppLauncher,
         swipeEventDao: SwipeEventDao,
-        bookmarkDao: BookmarkDao
+        bookmarkDao: BookmarkDao,
+        preferencesRepository: PreferencesRepository
     ) : this(
         savedStateHandle.toRoute<Route.ShowDetail>().id,
         tmdbRepository,
         appLauncher,
         swipeEventDao,
         bookmarkDao,
+        preferencesRepository,
         savedStateHandle.toRoute<Route.ShowDetail>().originProviderName
     )
 
@@ -130,12 +135,14 @@ class ShowDetailViewModel internal constructor(
                     // for this provider - otherwise it'd render a button that just no-ops.
                     val ctaProviderName = originProviderName?.takeIf { appLauncher.hasWebsiteSearch(it) }
                     val isBookmarked = bookmarkDao.getBookmark(show.id) != null
+                    val subscribedProviderIds = preferencesRepository.subscribedProviderIds.first()
 
                     _uiState.value = ShowDetailUiState.Success(
                         show,
                         providers,
                         originProviderName = ctaProviderName,
-                        isBookmarked = isBookmarked
+                        isBookmarked = isBookmarked,
+                        subscribedProviderIds = subscribedProviderIds
                     )
                     startDwellTracking(show)
                 } else {

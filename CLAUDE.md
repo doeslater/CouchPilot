@@ -14,10 +14,12 @@ Current shape: five bottom-nav tabs (Tonight — a 7-day UK broadcast schedule r
 Discover — TMDB trending shows filterable by watch provider; Search — direct title lookup for UK streaming
 availability via Watchmode (bridges to `ShowDetailScreen` for TV shows mapped to TMDB); Bookmarks — a live
 grid of shows explicitly saved for later via `ShowDetailScreen`'s heart toggle; Settings — clear all local
-data / reset onboarding), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider "open app"
-buttons, a Watchmode "check all sources" link, explicit up/downvote, a bookmark toggle, and a plain-Kotlin
-cosine-similarity recommendation engine fed by swipe/vote/dwell-time signals (bookmarking is deliberately
-*not* one of those signals — see `bookmarks/data/local/BookmarkEntity.kt`'s doc comment). See "No Firebase"
+data / reset onboarding, plus a "Manage your subscriptions" screen for ticking which UK services you
+pay for), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider "open app" buttons
+(dimmed + labeled "Not in your plan" for services you haven't ticked), a Watchmode "check all sources"
+link, explicit up/downvote, a bookmark toggle, and a plain-Kotlin cosine-similarity recommendation
+engine fed by swipe/vote/dwell-time signals (bookmarking and the subscription toggle are deliberately
+*not* among those signals — see `bookmarks/data/local/BookmarkEntity.kt`'s doc comment). See "No Firebase"
 below for what was removed in Phase 1 and why.
 
 ## Build / lint / test commands
@@ -89,7 +91,7 @@ skipped).
 - **Navigation:** `androidx.navigation:navigation-compose` with `kotlinx.serialization`-backed type-safe
   routes (not string routes) — `presentation/navigation/Route.kt` (sealed `Route` with `@Serializable` data
   objects/classes: `Tonight`, `Discover`, `Search`, `Bookmarks`, `Settings`, `Onboarding`, `Profile`,
-  `ShowDetail(id: Int, originProviderName: String? = null)`) and
+  `Subscriptions`, `ShowDetail(id: Int, originProviderName: String? = null)`) and
   `presentation/navigation/CouchPilotNavHost.kt` (bottom-tab `Scaffold` + `NavHost`, `composable<Route.X> { ... }`,
   bottom bar hidden on `Onboarding`). Add new top-level screens as another `Route` + `TopLevelTab` entry there;
   add detail-style screens as a `Route` with no tab entry, wired into the `NavHost` block directly.
@@ -167,6 +169,16 @@ skipped).
     `showId` via `TmdbRepository.getTvShowById()` concurrently (`async`/`awaitAll`, same shape as
     `TonightViewModel.enrichSchedule()`); a show whose lookup fails is silently dropped from the grid
     rather than failing the whole screen.
+  - `subscriptions/presentation/{SubscriptionsScreen,SubscriptionsViewModel,SubscriptionsUiState}.kt` +
+    `PreferencesRepository.subscribedProviderIds` (`Flow<Set<Int>>`, backed by a `stringSetPreferencesKey`
+    alongside the existing `hasCompletedOnboarding` boolean) — which UK watch providers the user has
+    ticked as "I pay for this." Deliberately a *de-emphasis*, not a filter: `ShowDetailUiState.Success`
+    carries a snapshot of this set, and `ShowDetailScreen`'s provider rows dim + label "Not in your plan"
+    any provider not in it — with an empty set (nothing configured yet) treated as "don't judge," not
+    "hide everything," so existing users see no change until they actually visit the new Settings entry.
+    Not applied to Discover/Tonight's show lists — neither `TvShow` nor `ScheduleItem` carries per-item
+    provider data, so a real list-level filter would need an extra TMDB call per visible item; see
+    ROADMAP.md's writeup for the full reasoning before trying to extend this past `ShowDetailScreen`.
   - **Data Source vs Repository:** a class that talks to one data source (one remote API, one DB) is a
     `*DataSource`; only a class that itself coordinates multiple data sources (e.g. remote + local cache, or
     Room + DataStore) should be called a `*Repository`/`*Manager`. If this app grows past its current handful

@@ -2,6 +2,7 @@ package com.example.couchpilot.showdetail.presentation
 
 import com.example.couchpilot.bookmarks.data.local.BookmarkDao
 import com.example.couchpilot.bookmarks.data.local.BookmarkEntity
+import com.example.couchpilot.core.data.PreferencesRepository
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.onboarding.data.local.SwipeEventDao
 import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
@@ -16,6 +17,7 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
@@ -35,6 +37,7 @@ class ShowDetailViewModelTest {
     private val appLauncher: AppLauncher = mockk(relaxed = true)
     private val swipeEventDao: SwipeEventDao = mockk(relaxed = true)
     private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
+    private val preferencesRepository: PreferencesRepository = mockk()
     private val testDispatcher = StandardTestDispatcher()
 
     private val show = TvShow(
@@ -52,6 +55,7 @@ class ShowDetailViewModelTest {
         Dispatchers.setMain(testDispatcher)
         coEvery { tmdbRepository.getTvShowById(1) } returns Result.Success(show)
         coEvery { tmdbRepository.getWatchProvidersForShow(1) } returns Result.Success(emptyList())
+        every { preferencesRepository.subscribedProviderIds } returns flowOf(emptySet())
     }
 
     @After
@@ -61,7 +65,8 @@ class ShowDetailViewModelTest {
 
     private fun buildViewModel(originProviderName: String? = null): ShowDetailViewModel {
         return ShowDetailViewModel(
-            showId = 1, tmdbRepository, appLauncher, swipeEventDao, bookmarkDao, originProviderName
+            showId = 1, tmdbRepository, appLauncher, swipeEventDao, bookmarkDao,
+            preferencesRepository, originProviderName
         )
     }
 
@@ -149,6 +154,26 @@ class ShowDetailViewModelTest {
             val state = viewModel.uiState.value as ShowDetailUiState.Success
             assertEquals(false, state.isBookmarked)
         }
+
+    @Test
+    fun `loads subscribedProviderIds from PreferencesRepository`() = runTest(testDispatcher) {
+        every { preferencesRepository.subscribedProviderIds } returns flowOf(setOf(8, 9))
+
+        val viewModel = buildViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value as ShowDetailUiState.Success
+        assertEquals(setOf(8, 9), state.subscribedProviderIds)
+    }
+
+    @Test
+    fun `subscribedProviderIds defaults to empty when nothing is configured`() = runTest(testDispatcher) {
+        val viewModel = buildViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value as ShowDetailUiState.Success
+        assertTrue(state.subscribedProviderIds.isEmpty())
+    }
 
     @Test
     fun `no dwell signal is recorded before the threshold elapses`() = runTest(testDispatcher) {

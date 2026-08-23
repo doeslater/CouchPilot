@@ -43,11 +43,11 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 | Empty state, hydration order, dropped-on-failure coverage. | `bookmarks/presentation/BookmarksViewModelTest.kt` (test) |
 | In-memory-Room DAO coverage. | `bookmarks/data/local/BookmarkDaoTest.kt` (androidTest) |
 
-## Settings — clear local data, reset/retake onboarding, link to Profile
+## Settings — clear local data, reset/retake onboarding, link to Profile & Subscriptions
 
 | Role | File |
 | --- | --- |
-| UI: clear-data confirm dialog, retake-swipes button, view-profile link. | `settings/presentation/SettingsScreen.kt` |
+| UI: clear-data confirm dialog, retake-swipes button, view-profile link, manage-subscriptions link. | `settings/presentation/SettingsScreen.kt` |
 | Wraps `LocalDataManager.clearAllLocalData()` and `PreferencesRepository.setOnboardingCompleted()`. | `settings/presentation/SettingsViewModel.kt` |
 | Holds `isClearing`/`didClear` flags. | `settings/presentation/SettingsUiState.kt` |
 | Covers clear-data and retake-onboarding paths. | `settings/presentation/SettingsViewModelTest.kt` (test) |
@@ -67,9 +67,9 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 
 | Role | File |
 | --- | --- |
-| UI: poster, title, thumbs up/down, bookmark heart, provider rows, chip-origin CTA, Watchmode "check all sources" link. | `showdetail/presentation/ShowDetailScreen.kt` |
-| Loads show + providers + bookmark state, records vote/dwell-time signals, toggles bookmark, launches provider apps/websites. | `showdetail/presentation/ShowDetailViewModel.kt` |
-| `Loading` / `Success(show, providers, userVote, originProviderName, isBookmarked)` / `Error`. | `showdetail/presentation/ShowDetailUiState.kt` |
+| UI: poster, title, thumbs up/down, bookmark heart, provider rows (dimmed + "Not in your plan" when unsubscribed), chip-origin CTA, Watchmode "check all sources" link. | `showdetail/presentation/ShowDetailScreen.kt` |
+| Loads show + providers + bookmark + subscribed-provider state, records vote/dwell-time signals, toggles bookmark, launches provider apps/websites. | `showdetail/presentation/ShowDetailViewModel.kt` |
+| `Loading` / `Success(show, providers, userVote, originProviderName, isBookmarked, subscribedProviderIds)` / `Error`. | `showdetail/presentation/ShowDetailUiState.kt` |
 | Installed-app check + generic app-open intent, website-search fallback per provider. | `showdetail/data/AppLauncher.kt` |
 | (interfaces backing the above, no Android imports) | `showdetail/domain/` |
 | Hilt bindings. | `showdetail/di/` |
@@ -83,6 +83,15 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 | Summarizes `SwipeEventDao` history through `RecommendationScorer`'s `PreferenceVector`. | `profile/presentation/ProfileViewModel.kt` |
 | Success/empty state. | `profile/presentation/ProfileUiState.kt` |
 | Empty-state + summarize/sort coverage. | `profile/presentation/ProfileViewModelTest.kt` (test) |
+
+## Subscriptions — tick which UK streaming services you pay for
+
+| Role | File |
+| --- | --- |
+| UI: checkable list of every GB watch provider. | `subscriptions/presentation/SubscriptionsScreen.kt` |
+| Loads the full provider list via `TmdbRepository.getWatchProviders()`, toggles + immediately persists the subscribed set via `PreferencesRepository`. | `subscriptions/presentation/SubscriptionsViewModel.kt` |
+| `Loading` / `Success(providers, subscribedIds)` / `Error`. | `subscriptions/presentation/SubscriptionsUiState.kt` |
+| Load/toggle/persist coverage. | `subscriptions/presentation/SubscriptionsViewModelTest.kt` (test) |
 
 ## Recommendation engine — on-device cosine-similarity scorer
 
@@ -115,7 +124,7 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 | --- | --- |
 | Single Room `@Database` (v7): `TvShowEntity`, `ScheduleItemEntity`, `SwipeEventEntity`, `BookmarkEntity`. | `core/database/CouchPilotDatabase.kt` |
 | Provides the DB + every DAO. | `core/database/di/DatabaseModule.kt` |
-| DataStore-backed `hasCompletedOnboarding` flag. | `core/data/PreferencesRepository.kt` |
+| DataStore-backed `hasCompletedOnboarding` flag + `subscribedProviderIds` set. | `core/data/PreferencesRepository.kt` |
 | Wipes Room + the onboarding flag behind one `clearAllLocalData()` call. | `core/domain/LocalDataManager.kt` / `core/data/DefaultLocalDataManager.kt` |
 | Hilt binding for the above. | `core/di/LocalDataModule.kt` |
 

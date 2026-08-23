@@ -196,6 +196,54 @@ of work, and update the checkboxes below as phases land.
       - Verified: `./gradlew testDebugUnitTest` (full suite) and `assembleDebug` both clean; on a
         connected device (`Pixel 6 - 17`), `./gradlew connectedDebugAndroidTest` passes clean too
         (12 tests: the pre-existing 7 plus the new `BookmarkDaoTest`'s 5, 0 failures/errors/skipped).
+- [x] **Watchlist & Provider Toggle** — GENERAL_IDEA.md's other Feature Backlog item under
+      "Compliance, Personalization & Alerts": "Users tick off streaming subscriptions they pay for
+      so the app hides content locked behind paywalls they don't have."
+      - **Scope, decided up front and worth stating explicitly**: a true "hide shows I can't watch"
+        filter on Discover/Tonight isn't cleanly implementable today - `TvShow` (Discover's grid
+        items) and `ScheduleItem` (Tonight's schedule rows) carry no per-item provider data at all,
+        only `ShowDetailScreen` does (via `getWatchProvidersForShow`), so filtering either list
+        would mean an expensive per-visible-item TMDB call (N+1) neither screen currently makes.
+        Scoped down to what's honestly cheap: a new "My Subscriptions" screen to tick which UK
+        services you pay for, applied as a **de-emphasis** (greyed out + "Not in your plan" label),
+        not a hard hide, on `ShowDetailScreen`'s existing per-show provider list - the one place
+        real provider data already exists. Hiding outright was considered and rejected: a user might
+        still want to know a show exists on a service they don't currently pay for. An empty
+        subscription set (nothing ticked yet) intentionally de-emphasizes nothing, so existing users
+        upgrading into this feature don't suddenly see every provider greyed out.
+      - `PreferencesRepository` gained `subscribedProviderIds: Flow<Set<Int>>` +
+        `setSubscribedProviderIds(ids: Set<Int>)`, a `stringSetPreferencesKey` alongside the existing
+        `hasCompletedOnboarding` boolean - DataStore has no native `Set<Int>`, so ids round-trip as
+        strings, dropping (not crashing on) any value that fails to parse back to an `Int`.
+      - New `subscriptions/presentation/{SubscriptionsUiState,SubscriptionsViewModel,
+        SubscriptionsScreen}.kt` - loads the full GB provider list via the existing
+        `TmdbRepository.getWatchProviders()` (same list Discover's filter chips already use),
+        renders a checkable row per provider, persists the whole set on every tap (no separate
+        "Save" step, same immediate-write convention as `ShowDetailViewModel.onToggleBookmark()`).
+        Reached from a new "Manage your subscriptions" button on `SettingsScreen`, via a new
+        `Route.Subscriptions` (detail-style, no bottom-nav tab, same shape as `Route.Profile`).
+      - `ShowDetailUiState.Success` gained `subscribedProviderIds: Set<Int> = emptySet()`, snapshotted
+        from `PreferencesRepository` in `loadShowDetails()`; `ShowDetailScreen`'s `ProviderRow` now
+        takes `isSubscribed: Boolean` and dims (`Modifier.alpha(0.5f)`) + labels "Not in your plan"
+        any provider not in that set, computed as `subscribedProviderIds.isEmpty() ||
+        provider.id in subscribedProviderIds` so an unconfigured user sees the screen exactly as
+        before.
+      - New `SubscriptionsViewModelTest` (load success/error, toggle-adds, toggle-removes, each
+        toggle verified to call `setSubscribedProviderIds` with the right resulting set) and two new
+        `ShowDetailViewModelTest` cases (subscribedProviderIds loads from the repository; defaults
+        to empty when unconfigured). No new test was added for `PreferencesRepository` itself - it
+        already had zero test coverage before this (it's `Context`-backed DataStore, not trivially
+        unit-testable without Robolectric/an instrumented test), and this change doesn't newly
+        introduce that gap, just extends an already-untested class the same way `hasCompletedOnboarding`
+        already was.
+      - Verified: `./gradlew testDebugUnitTest assembleDebug connectedDebugAndroidTest` all clean (12
+        instrumented tests, unchanged - this feature added no new Room/DAO code). On-device
+        (`Pixel 6 - 17`): ticked BBC iPlayer + Netflix in the new Subscriptions screen, confirmed the
+        state persisted across screen navigation; opened *House of the Dragon* (on neither) and saw
+        every provider row dimmed and labeled "Not in your plan"; opened *One Piece* (on Netflix) and
+        confirmed the plain "Netflix" row rendered at full brightness with no label while a distinct
+        provider id, "Netflix Standard with Ads," still showed "Not in your plan" - confirming the
+        filter matches by exact TMDB provider id, not by display-name substring.
 
 ### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
 **Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.
