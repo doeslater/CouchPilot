@@ -9,8 +9,10 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
@@ -242,5 +244,52 @@ class DiscoverViewModelTest {
         val state = viewModel.uiState.value as DiscoverUiState.Success
         assertEquals(collectionsBefore, state.collections)
         assertTrue(state.collections.any { it.shows?.isNotEmpty() == true })
+    }
+
+    @Test
+    fun `a collection that finishes hydrating while a provider filter is still in flight is not clobbered`() {
+        // UnconfinedTestDispatcher (used by every other test here) resolves suspending calls
+        // synchronously, so it can never actually interleave two in-flight coroutines - this
+        // regression needs real manual control over which suspends first, so it uses
+        // StandardTestDispatcher + an explicit gate instead.
+        val dispatcher = StandardTestDispatcher()
+        Dispatchers.setMain(dispatcher)
+        try {
+            coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+            coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+            val trendingGate = CompletableDeferred<Result<List<TvShow>, DataError>>()
+            coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } coAnswers { trendingGate.await() }
+            val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
+            val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
+            coEvery {
+                tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
+            } returns Result.Success(listOf(resolvedShow))
+
+            val viewModel = buildViewModel()
+            dispatcher.scheduler.runCurrent()
+            val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+                .collections.first { it.title == genreCollection.title }
+
+            // Provider filter tapped - getTrendingTvShows(netflix.id) suspends on trendingGate.
+            viewModel.selectProvider(netflix.id)
+            dispatcher.scheduler.runCurrent()
+
+            // While that request is still in flight, the collection row's own query resolves.
+            viewModel.loadCollectionShows(discoverCollection)
+            dispatcher.scheduler.runCurrent()
+            val hydratedWhileFilterPending = (viewModel.uiState.value as DiscoverUiState.Success)
+                .collections.first { it.title == genreCollection.title }
+            assertEquals(listOf(resolvedShow), hydratedWhileFilterPending.shows)
+
+            // Now let the provider-filtered trending query resolve.
+            trendingGate.complete(Result.Success(emptyList()))
+            dispatcher.scheduler.runCurrent()
+
+            val finalCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+                .collections.first { it.title == genreCollection.title }
+            assertEquals(listOf(resolvedShow), finalCollection.shows)
+        } finally {
+            Dispatchers.resetMain()
+        }
     }
 }

@@ -15,10 +15,10 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 
 | Role | File |
 | --- | --- |
-| UI: provider filter chips + trending poster grid; curated collection rows (full-span grid items) shown only when no provider filter is active. | `discover/presentation/DiscoverScreen.kt` |
-| Loads providers + trending shows + curated collections concurrently; re-fetches trending on provider filter change (preserving collections, job-cancellation for rapid taps). | `discover/presentation/DiscoverViewModel.kt` |
-| `Loading` / `Success(shows, providers, selectedProviderId, collections)` / `Error`; `DiscoverCollection(title, shows)`. | `discover/presentation/DiscoverUiState.kt` |
-| 4 collection definitions (`title, genreId, minVoteCount`) - drives a live TMDB genre+GB-origin query, not a hardcoded show list. | `discover/domain/UkCultureCollections.kt` |
+| UI: provider filter chips + "Collections"/"All" chips + trending poster grid; curated collection rows (full-span grid items) shown only when no provider filter is active. | `discover/presentation/DiscoverScreen.kt` |
+| Loads providers + trending shows concurrently at init; each collection is defined instantly with `shows = null` and only actually queried once its row scrolls into view (`loadCollectionShows()`), so opening Discover doesn't fire a dozen genre/network-discover calls up front. Re-fetches trending on provider filter change, preserving any collections (including ones hydrated concurrently mid-filter-change) and job-cancelling rapid taps. | `discover/presentation/DiscoverViewModel.kt` |
+| `Loading` / `Success(shows, providers, selectedProviderId, collections, isClassicSelected)` / `Error`; `DiscoverCollection(title, minVoteCount, genreId, networkId, shows)`. | `discover/presentation/DiscoverUiState.kt` |
+| 12 collection definitions (10 genre-based + 2 network/broadcaster-based, `title, minVoteCount, genreId?, networkId?`) - each drives a live TMDB genre+GB-origin or network-based discover query, not a hardcoded show list. | `discover/domain/UkCultureCollections.kt` |
 | Collections hydration + provider-filter tests. | `discover/presentation/DiscoverViewModelTest.kt` (test) |
 
 ## Search — direct title lookup for UK streaming availability (Watchmode)

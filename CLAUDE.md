@@ -159,13 +159,23 @@ skipped).
     check that source's items actually carry TMDB integer genre IDs before calling `score()` — TVmaze exposes
     free-text genre names, a different vocabulary the scorer can't use directly (see `TonightViewModel`'s
     `enrichSchedule()` for the TMDB-bridge pattern that resolves this).
-  - `discover/domain/UkCultureCollections.kt` — curated Discover rows ("Bingeable Box Sets," etc.)
-    defined as `(title, genreId, minVoteCount)`, resolved live via `TmdbRepository.discoverByGenre()`
-    (TMDB `/discover/tv` with `with_origin_country=GB` + `with_genres` + `vote_count.gte`) — not a
-    hardcoded show-id list, so it self-refreshes as TMDB's own vote data changes. Rendered only when
-    `DiscoverUiState.Success.selectedProviderId == null`: showing them while a provider filter is
-    active buried the actually-filtered grid below several rows of unchanged content, making a
-    working filter look broken (a real usability bug, found and fixed after shipping this feature).
+  - `discover/domain/UkCultureCollections.kt` — 12 curated Discover rows ("Bingeable Box Sets," etc.):
+    10 genre-based, defined as `(title, genreId, minVoteCount)` and resolved live via
+    `TmdbRepository.discoverByGenre()` (TMDB `/discover/tv` with `with_origin_country=GB` +
+    `with_genres` + `vote_count.gte`), plus 2 network/broadcaster-based ("Best of ITV," "Best of
+    Channel 4"), defined as `(title, networkId, minVoteCount)` and resolved via
+    `TmdbRepository.discoverByNetwork()` (`with_networks` instead of `with_genres`) — not a
+    hardcoded show-id list, so it self-refreshes as TMDB's own vote data changes. Each collection is
+    defined instantly with `shows = null` and only actually queried the first time its row scrolls
+    into view (`DiscoverViewModel.loadCollectionShows()`, guarded against double-firing by a
+    `requestedTitles` set keyed on title), so opening Discover doesn't fire a dozen network calls
+    whether or not the user ever scrolls down to see them. Rendered only when
+    `DiscoverUiState.Success.selectedProviderId == null && !isClassicSelected` — a provider filter
+    chip *or* the "All" chip both hide collections (the "All" chip exists solely to reproduce the
+    screen's pre-collections appearance for anyone who preferred that simpler view, next to a
+    "Collections" chip that shows them); showing collections under an active provider filter buried
+    the actually-filtered grid below several rows of unchanged content, making a working filter look
+    broken (a real usability bug, found and fixed after shipping this feature).
   - `bookmarks/data/local/{BookmarkEntity,BookmarkDao}.kt` — a "save for later" signal, kept deliberately
     separate from `SwipeEventEntity` and out of `RecommendationScorer` (bookmarking isn't a taste signal).
     No repository layer: `ShowDetailViewModel` and `BookmarksViewModel` inject `BookmarkDao` directly, the

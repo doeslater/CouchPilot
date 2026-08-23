@@ -128,7 +128,6 @@ class DiscoverViewModel @Inject constructor(
         loadTrendingJob = viewModelScope.launch {
             // Keep current success state if possible to avoid flickering while filtering
             val currentState = _uiState.value
-            val collections = (currentState as? DiscoverUiState.Success)?.collections ?: emptyList()
             if (currentState !is DiscoverUiState.Success) {
                 _uiState.value = DiscoverUiState.Loading
             } else {
@@ -142,13 +141,25 @@ class DiscoverViewModel @Inject constructor(
 
             tmdbRepository.getTrendingTvShows(providerId)
                 .onSuccess { shows ->
-                    _uiState.value = DiscoverUiState.Success(
-                        shows = shows,
-                        providers = allProviders,
-                        selectedProviderId = providerId,
-                        collections = collections,
-                        isClassicSelected = isClassic,
-                    )
+                    // Read collections from the *latest* state, not a snapshot captured before this
+                    // suspending call - a collection row can finish hydrating (loadCollectionShows())
+                    // while this request is in flight, and _uiState.update applies against whatever the
+                    // current value is, so that hydration survives instead of being clobbered by a stale
+                    // pre-network snapshot (the collection's title would already be in requestedTitles by
+                    // then, so a clobbered row could never retry and would spin forever).
+                    _uiState.update { state ->
+                        val latestCollections = (state as? DiscoverUiState.Success)?.collections
+                            ?: UK_CULTURE_COLLECTIONS.map {
+                                DiscoverCollection(it.title, it.minVoteCount, it.genreId, it.networkId)
+                            }
+                        DiscoverUiState.Success(
+                            shows = shows,
+                            providers = allProviders,
+                            selectedProviderId = providerId,
+                            collections = latestCollections,
+                            isClassicSelected = isClassic,
+                        )
+                    }
                 }
                 .onFailure { error -> _uiState.value = DiscoverUiState.Error(error.toString()) }
         }
