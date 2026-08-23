@@ -15,6 +15,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -31,6 +32,12 @@ class DiscoverViewModelTest {
     private val trendingShows = listOf(
         TvShow(1, "Show 1", "O1", null, 8.0, "2024", listOf(1))
     )
+
+    // Shared fixture for every test that hydrates one genre-based collection - the specific
+    // genre collection and the show TMDB resolves it to don't vary test to test, so tests just
+    // reuse these rather than each hand-rolling their own copies.
+    private val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
+    private val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
 
     @Before
     fun setup() {
@@ -150,8 +157,6 @@ class DiscoverViewModelTest {
     fun `loadCollectionShows hydrates only the requested genre-based collection`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
-        val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
         coEvery {
             tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
         } returns Result.Success(listOf(resolvedShow))
@@ -192,7 +197,6 @@ class DiscoverViewModelTest {
     fun `loadCollectionShows only fires the query once per collection`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
         val viewModel = buildViewModel()
         val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
             .collections.first { it.title == genreCollection.title }
@@ -209,7 +213,6 @@ class DiscoverViewModelTest {
     fun `a collection whose query fails ends up empty, not fatal to the screen`() {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
         coEvery {
             tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
         } returns Result.Error(DataError.Network.SERVER_ERROR)
@@ -228,8 +231,6 @@ class DiscoverViewModelTest {
         coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
         coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
         coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } returns Result.Success(emptyList())
-        val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
-        val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
         coEvery {
             tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
         } returns Result.Success(listOf(resolvedShow))
@@ -255,41 +256,91 @@ class DiscoverViewModelTest {
         val dispatcher = StandardTestDispatcher()
         Dispatchers.setMain(dispatcher)
         try {
-            coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
-            coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
-            val trendingGate = CompletableDeferred<Result<List<TvShow>, DataError>>()
-            coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } coAnswers { trendingGate.await() }
-            val genreCollection = UK_CULTURE_COLLECTIONS.first { it.genreId != null }
-            val resolvedShow = TvShow(99, "Real Show", "O", null, 9.0, "2020", emptyList())
-            coEvery {
-                tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
-            } returns Result.Success(listOf(resolvedShow))
+            runTest(dispatcher) {
+                coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+                coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+                val trendingGate = CompletableDeferred<Result<List<TvShow>, DataError>>()
+                coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } coAnswers { trendingGate.await() }
+                coEvery {
+                    tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
+                } returns Result.Success(listOf(resolvedShow))
 
-            val viewModel = buildViewModel()
-            dispatcher.scheduler.runCurrent()
-            val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
-                .collections.first { it.title == genreCollection.title }
+                val viewModel = buildViewModel()
+                dispatcher.scheduler.runCurrent()
+                val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+                    .collections.first { it.title == genreCollection.title }
 
-            // Provider filter tapped - getTrendingTvShows(netflix.id) suspends on trendingGate.
-            viewModel.selectProvider(netflix.id)
-            dispatcher.scheduler.runCurrent()
+                // Provider filter tapped - getTrendingTvShows(netflix.id) suspends on trendingGate.
+                viewModel.selectProvider(netflix.id)
+                dispatcher.scheduler.runCurrent()
 
-            // While that request is still in flight, the collection row's own query resolves.
-            viewModel.loadCollectionShows(discoverCollection)
-            dispatcher.scheduler.runCurrent()
-            val hydratedWhileFilterPending = (viewModel.uiState.value as DiscoverUiState.Success)
-                .collections.first { it.title == genreCollection.title }
-            assertEquals(listOf(resolvedShow), hydratedWhileFilterPending.shows)
+                // While that request is still in flight, the collection row's own query resolves.
+                viewModel.loadCollectionShows(discoverCollection)
+                dispatcher.scheduler.runCurrent()
+                val hydratedWhileFilterPending = (viewModel.uiState.value as DiscoverUiState.Success)
+                    .collections.first { it.title == genreCollection.title }
+                assertEquals(listOf(resolvedShow), hydratedWhileFilterPending.shows)
 
-            // Now let the provider-filtered trending query resolve.
-            trendingGate.complete(Result.Success(emptyList()))
-            dispatcher.scheduler.runCurrent()
+                // Now let the provider-filtered trending query resolve.
+                trendingGate.complete(Result.Success(emptyList()))
+                dispatcher.scheduler.runCurrent()
 
-            val finalCollection = (viewModel.uiState.value as DiscoverUiState.Success)
-                .collections.first { it.title == genreCollection.title }
-            assertEquals(listOf(resolvedShow), finalCollection.shows)
+                val finalCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+                    .collections.first { it.title == genreCollection.title }
+                assertEquals(listOf(resolvedShow), finalCollection.shows)
+            }
         } finally {
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun `loadTrending rebuilds collections from scratch if the Success state was lost, and lets a stranded title retry`() {
+        // Drives loadTrending's onSuccess into its state-not-Success fallback branch (line ~156):
+        // hydrate one collection, then force the state to Error via one failed filter change, then
+        // let a second filter change succeed while the state is still Error/Loading (not Success) -
+        // reproducing "a collection's title was already requested against a Success state that then
+        // got discarded" without needing to fight loadTrendingJob's own cancel-the-previous-job logic.
+        coEvery { tmdbRepository.getWatchProviders() } returns Result.Success(listOf(netflix))
+        coEvery { tmdbRepository.getTrendingTvShows(null) } returns Result.Success(trendingShows)
+        coEvery {
+            tmdbRepository.discoverByGenre(genreCollection.genreId!!, genreCollection.minVoteCount)
+        } returns Result.Success(listOf(resolvedShow))
+        val viewModel = buildViewModel()
+        val discoverCollection = (viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }
+        viewModel.loadCollectionShows(discoverCollection)
+        check((viewModel.uiState.value as DiscoverUiState.Success)
+            .collections.first { it.title == genreCollection.title }.shows == listOf(resolvedShow))
+
+        // A filter change whose trending request fails discards the Success state (and the
+        // hydrated collection along with it).
+        coEvery { tmdbRepository.getTrendingTvShows(netflix.id) } returns
+            Result.Error(DataError.Network.SERVER_ERROR)
+        viewModel.selectProvider(netflix.id)
+        assertTrue(viewModel.uiState.value is DiscoverUiState.Error)
+
+        // The next filter change succeeds while the current state is Error (not Success) - this
+        // is exactly the fallback branch under test.
+        coEvery { tmdbRepository.getTrendingTvShows(8080) } returns Result.Success(emptyList())
+        viewModel.selectProvider(8080)
+
+        val state = viewModel.uiState.value
+        assertTrue(state is DiscoverUiState.Success)
+        state as DiscoverUiState.Success
+        assertEquals(UK_CULTURE_COLLECTIONS.size, state.collections.size)
+        assertTrue(state.collections.all { it.shows == null })
+
+        // Because the fallback also cleared requestedTitles, the collection that was already
+        // "spent" against the now-discarded state can be requested again - it doesn't spin
+        // forever with shows = null.
+        val rebuiltCollection = state.collections.first { it.title == genreCollection.title }
+        viewModel.loadCollectionShows(rebuiltCollection)
+
+        val finalState = viewModel.uiState.value as DiscoverUiState.Success
+        assertEquals(
+            listOf(resolvedShow),
+            finalState.collections.first { it.title == genreCollection.title }.shows,
+        )
     }
 }

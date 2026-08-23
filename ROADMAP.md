@@ -242,8 +242,16 @@ of work, and update the checkboxes below as phases land.
         (12/12 instrumented, unchanged by this feature). On-device (`Pixel 6 - 17`): all 4
         collections confirmed rendering real, correctly-genred shows matching the curl-verified
         predictions exactly; tapping a collection poster still opens `ShowDetailScreen`; confirmed
-        the chip-visibility fix across All → BBC iPlayer → ITVX, each now showing real filtered
+         the chip-visibility fix across All → BBC iPlayer → ITVX, each now showing real filtered
         content immediately with no stale rows in the way.
+- [x] **Discover Collection Robustness** — Hardened the Discover screen's hydration logic to handle
+      edge cases where the `Success` state might be lost (e.g. during a failed filter change).
+      `DiscoverViewModel` now preserves hydrated collections better and correctly resets its
+      request-tracking state (`requestedTitles`) when the Success state has to be reconstructed
+      from scratch, ensuring that rows don't "spin forever" if their first fetch happened against
+      a state that was subsequently discarded. New `DiscoverViewModelTest` coverage ensures this
+      fallback path and its retry-behavior are verified. Verified: `./gradlew testDebugUnitTest`
+      clean (50/50 tests passed).
 
 ### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
 **Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.

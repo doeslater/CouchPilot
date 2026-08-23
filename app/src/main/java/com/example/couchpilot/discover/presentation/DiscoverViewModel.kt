@@ -47,6 +47,12 @@ class DiscoverViewModel @Inject constructor(
         loadInitialData()
     }
 
+    /** The 12 UK culture collections, freshly defined with shows = null - i.e. "not yet
+     *  hydrated." Used both for the very first Success state and as a fallback when a later
+     *  Success state has to be reconstructed from scratch (see loadTrending's onSuccess). */
+    private fun defaultCollections(): List<DiscoverCollection> =
+        UK_CULTURE_COLLECTIONS.map { DiscoverCollection(it.title, it.minVoteCount, it.genreId, it.networkId) }
+
     private fun loadInitialData() {
         viewModelScope.launch {
             _uiState.value = DiscoverUiState.Loading
@@ -75,9 +81,7 @@ class DiscoverViewModel @Inject constructor(
                         shows = shows,
                         providers = allProviders,
                         selectedProviderId = null,
-                        collections = UK_CULTURE_COLLECTIONS.map {
-                            DiscoverCollection(it.title, it.minVoteCount, it.genreId, it.networkId)
-                        },
+                        collections = defaultCollections(),
                     )
                 }
                 .onFailure { error -> _uiState.value = DiscoverUiState.Error(error.toString()) }
@@ -147,16 +151,23 @@ class DiscoverViewModel @Inject constructor(
                     // current value is, so that hydration survives instead of being clobbered by a stale
                     // pre-network snapshot (the collection's title would already be in requestedTitles by
                     // then, so a clobbered row could never retry and would spin forever).
+                    val fallbackCollections = defaultCollections()
                     _uiState.update { state ->
                         val latestCollections = (state as? DiscoverUiState.Success)?.collections
-                            ?: UK_CULTURE_COLLECTIONS.map {
-                                DiscoverCollection(it.title, it.minVoteCount, it.genreId, it.networkId)
-                            }
+                        if (latestCollections == null) {
+                            // The Success state (and whatever collections it held) was lost - e.g. the
+                            // state was Error or Loading at this point - so we're about to rebuild every
+                            // collection from scratch with shows = null. Forget which titles were already
+                            // requested, or a title that was requested against the now-discarded state
+                            // could never be re-fetched and its row would spin forever (see the comment
+                            // above and requestedTitles' own doc comment).
+                            requestedTitles.clear()
+                        }
                         DiscoverUiState.Success(
                             shows = shows,
                             providers = allProviders,
                             selectedProviderId = providerId,
-                            collections = latestCollections,
+                            collections = latestCollections ?: fallbackCollections,
                             isClassicSelected = isClassic,
                         )
                     }
