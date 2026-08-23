@@ -193,10 +193,9 @@ of work, and update the checkboxes below as phases land.
         `ProfileViewModelTest` — the one existing test in the repo where a ViewModel's state is
         driven by collecting a DAO `Flow`), and new cases added to `ShowDetailViewModelTest` for the
         initial bookmark-loaded state and both toggle directions.
-      - Verified: `./gradlew testDebugUnitTest` (full suite) and `assembleDebug` both clean.
-      - **Not yet done**: `connectedDebugAndroidTest` (covers the new `BookmarkDaoTest`) needs a
-        device/emulator, which wasn't available while landing this — run it before considering this
-        fully closed out, same caveat as other DAO tests in this doc.
+      - Verified: `./gradlew testDebugUnitTest` (full suite) and `assembleDebug` both clean; on a
+        connected device (`Pixel 6 - 17`), `./gradlew connectedDebugAndroidTest` passes clean too
+        (12 tests: the pre-existing 7 plus the new `BookmarkDaoTest`'s 5, 0 failures/errors/skipped).
 
 ### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
 **Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.
