@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this project is
 
-CouchPilot is a local-first, privacy-focused UK TV recommendation app (see `general_idea.md` for the full
+CouchPilot is a local-first, privacy-focused UK TV recommendation app (see `GENERAL_IDEA.md` for the full
 concept: TVmaze/TMDB/Watchmode as free data sources, an on-device recommendation engine, Room for local storage,
 deep-links into UK catch-up apps like iPlayer/ITVX/Channel 4/My5, and no external user accounts).
 
@@ -17,9 +17,8 @@ grid of shows explicitly saved for later via `ShowDetailScreen`'s heart toggle; 
 data / reset onboarding), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider "open app"
 buttons, a Watchmode "check all sources" link, explicit up/downvote, a bookmark toggle, and a plain-Kotlin
 cosine-similarity recommendation engine fed by swipe/vote/dwell-time signals (bookmarking is deliberately
-*not* one of those signals — see `bookmarks/data/local/BookmarkEntity.kt`'s doc comment). Firebase AI Logic
-and the template's "Baking" sample were removed in Phase 1 — nothing in `general_idea.md` calls for an AI
-model, so don't re-add that dependency without a real reason.
+*not* one of those signals — see `bookmarks/data/local/BookmarkEntity.kt`'s doc comment). See "No Firebase"
+below for what was removed in Phase 1 and why.
 
 ## Build / lint / test commands
 
@@ -59,8 +58,8 @@ skipped).
   starting its first load. Follow this same shape (`XxxViewModel` + `XxxUiState` sealed interface) for new
   screens rather than introducing a different state-management approach.
 - **No Firebase.** Removed in Phase 1 along with the Baking sample — don't re-add `firebase-ai`/`google-services`
-  without a real reason; nothing in `general_idea.md` calls for an AI model.
-- **Secrets/API keys** (TMDB and Watchmode) must never be committed — per `general_idea.md`, this repo is
+  without a real reason; nothing in `GENERAL_IDEA.md` calls for an AI model.
+- **Secrets/API keys** (TMDB and Watchmode) must never be committed — per `GENERAL_IDEA.md`, this repo is
   public and keys are expected to stay out of git entirely.
   - Real values go in `secrets.properties` (gitignored — deliberately separate from the
     machine-specific `local.properties` so it can be synced across your own machines without clobbering
@@ -149,7 +148,7 @@ skipped).
     behind a single `clearAllLocalData()` call. Named a "manager," not a repository, since it has no reads.
   - `tmdb/`, `tvmaze/` and `watchmode/` are both named/typed as `*Repository` (not `*DataSource`) even though each has only
     one remote source today, because each is the seam a local Room cache slots into (and now has) without
-    presentation code changing — see general_idea.md's offline-first "Smart Cache" idea. Each repository impl
+    presentation code changing — see GENERAL_IDEA.md's offline-first "Smart Cache" idea. Each repository impl
     is cache-then-refresh: return cached rows if fresh, otherwise hit the network and update the cache.
   - `recommendation/domain/{PreferenceVector,RecommendationScorer}.kt` — plain-Kotlin cosine similarity over
     TMDB genre IDs, built from `SwipeEventDao` history. Every recorded signal (onboarding swipe, explicit

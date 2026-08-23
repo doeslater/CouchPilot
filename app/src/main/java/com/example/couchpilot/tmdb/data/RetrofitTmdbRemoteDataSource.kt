@@ -12,7 +12,7 @@ import javax.inject.Inject
 class RetrofitTmdbRemoteDataSource @Inject constructor(
     private val tmdbService: TmdbService
 ) {
-    // CouchPilot is UK-only (per general_idea.md) — "GB" is the ISO-3166 region TMDB expects,
+    // CouchPilot is UK-only (per GENERAL_IDEA.md) — "GB" is the ISO-3166 region TMDB expects,
     // not "UK". Never default this back to "US".
     suspend fun getTrendingTvShows(): Result<TrendingTvShowsResponseDto, DataError.Network> {
         return safeCall {

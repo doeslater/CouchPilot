@@ -16,7 +16,7 @@ import javax.inject.Inject
 /**
  * Surfaces the same PreferenceVector that RecommendationScorer builds internally for ranking
  * Tonight/Discover, plus raw swipe/vote counts from SwipeEventDao, so the user can actually see
- * what "learning your taste" has picked up on (general_idea.md's "Privacy-Preserving AI Sync" -
+ * what "learning your taste" has picked up on (GENERAL_IDEA.md's "Privacy-Preserving AI Sync" -
  * this is the one place that sync becomes visible instead of only ever acting behind the scenes).
  */
 @HiltViewModel

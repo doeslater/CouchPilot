@@ -1,8 +1,8 @@
-# CouchPilot roadmap — from general_idea.md to a real app
+# CouchPilot roadmap — from GENERAL_IDEA.md to a real app
 
 ## Context
 
-`general_idea.md` describes CouchPilot's target shape: a local-first, privacy-focused UK TV
+`GENERAL_IDEA.md` describes CouchPilot's target shape: a local-first, privacy-focused UK TV
 recommendation app built on TVmaze (schedule) + TMDB (metadata/trending/watch providers), with an
 on-device recommendation engine, Room for local storage, a swipe-based cold-start, offline-first
 caching, and deep links into UK catch-up apps.
@@ -52,7 +52,7 @@ of work, and update the checkboxes below as phases land.
       bottom-nav tab, entered via a new "View your taste profile" button on `SettingsScreen`)
       surfacing the same `PreferenceVector` `RecommendationScorer` already builds internally for
       Tonight/Discover ranking, which until now only ever acted behind the scenes — this is the
-      first place general_idea.md's "Privacy-Preserving AI Sync" becomes visible to the user
+      first place GENERAL_IDEA.md's "Privacy-Preserving AI Sync" becomes visible to the user
       instead of just powering ranking silently. Shows total signals recorded (liked/disliked
       counts, from `SwipeEventDao`) plus a per-genre affinity list (name + signed weight + a
       colored bar sized relative to the largest-magnitude genre), sorted strongest-liked to
@@ -149,13 +149,6 @@ of work, and update the checkboxes below as phases land.
         confirmation that tapping the chip-origin CTA for each of the 5 providers actually lands
         on a real, relevant search page for the tapped show — only the Channel 4 fix has been
         spot-checked (still only via headless fetch, not the actual app on a device).
-- [x] **Phase 5** — Real cosine-similarity scorer built and wired into both Discover and Tonight
-      (see Phase 5's writeup — one real bug found/fixed getting the Tonight side working)
-- [x] **Phase 6** — Watch providers, `ShowDetailScreen` with provider logos + "Open" button, and
-      Discover/Tonight both navigate to it — see Phase 6's writeup for the one caveat left
-- [x] **Phase 7** — Dwell-time + explicit vote signals, a Settings screen to clear local data, and
-      ViewModel unit tests across the app (see Phase 7's writeup — one real main-thread crash
-      found/fixed getting the "clear data" path working)
 - [x] **Search URLs** — Support show-specific search URLs in AppLauncher. Landed in `d33a6c8`:
       `AppLauncher.launchProviderApp()` gained `showName`/`fallbackUrl` params, and a new
       `providerWebMap` builds `<provider search base> + URLEncoder.encode(showName)` for the
@@ -170,7 +163,7 @@ of work, and update the checkboxes below as phases land.
       originally written ("tap Netflix, browser opens to Netflix search for the show") only
       actually exercises this fix if Netflix isn't installed on the test device — hasn't been
       re-run on-device since landing; do that before considering this fully closed out.
-- [x] **Bookmark a show** — general_idea.md's Feature Backlog item promoted to a real feature: a
+- [x] **Bookmark a show** — GENERAL_IDEA.md's Feature Backlog item promoted to a real feature: a
       user can save a show for later independent of the up/downvote taste signal, and browse
       everything saved from a new bottom-nav tab.
       - New `bookmarks/data/local/{BookmarkEntity,BookmarkDao}.kt` — a `bookmarks` Room table keyed
@@ -232,7 +225,7 @@ of work, and update the checkboxes below as phases land.
 - Verified on-device: Search works, clear button works, Watchmode details load, and the UI is now
   completely edge-to-edge with no black bars at top or bottom.
 
-## Reality checks against general_idea.md (apply throughout)
+## Reality checks against GENERAL_IDEA.md (apply throughout)
 
 - **TVmaze**: real, free, no key. `GET /schedule?country=GB&date=YYYY-MM-DD` is the broadcast
   schedule endpoint (ISO code `GB`, not `UK`). It does **not** tag channels as Freeview/Freesat/Sky
@@ -250,11 +243,11 @@ of work, and update the checkboxes below as phases land.
 - **UK app deep links**: no documented public URI-scheme/App-Link contract from BBC/ITV/C4/Channel 5
   for jumping straight to a title inside their apps. Realistic ceiling: detect if the app is
   installed and open it generically, else fall back to its Play Store listing. This is a real
-  downgrade from general_idea.md's "direct deep-link buttons that open... the show" — build it as
+  downgrade from GENERAL_IDEA.md's "direct deep-link buttons that open... the show" — build it as
   "open app / open Play Store," and say so in the UI, don't imply it lands on the exact episode.
 - **On-device recommendation**: a trained TensorFlow Lite model isn't realistic here — no dataset,
   no labels, no training pipeline, and per-user on-device *training* is a different, much bigger
-  problem than general_idea.md actually needs. Build the doc's own "alternative light engine"
+  problem than GENERAL_IDEA.md actually needs. Build the doc's own "alternative light engine"
   instead: a plain-Kotlin genre-vector + cosine-similarity scorer, no ML dependency at all. TFLite
   is dropped from this roadmap; it's a real future idea if the app ever gets real usage data, not a
   scheduled phase.
@@ -316,7 +309,7 @@ live TMDB data, Firebase AI gone entirely.
   days shows genuinely different real schedules (confirmed today vs. Friday 21st August).
 
 ### Phase 3 — Room offline-first cache + Wi-Fi prefetch ✅ done
-**Goal:** the app works offline, per general_idea.md's "Smart Cache."
+**Goal:** the app works offline, per GENERAL_IDEA.md's "Smart Cache."
 
 - `core/database/CouchPilotDatabase.kt` (`@Database`, now at version 4 — see Phases 4/5 for why it
   kept bumping) + `core/database/di/DatabaseModule.kt`. As anticipated, this file imports entity

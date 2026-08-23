@@ -6,7 +6,7 @@ import com.example.couchpilot.core.domain.Result
 /**
  * TMDB is the only data source behind this today (see [com.example.couchpilot.tmdb.data.RetrofitTmdbRemoteDataSource]),
  * but it's named — and typed on the broader [DataError], not [DataError.Network] — as a repository rather than a
- * data source because it's the seam where a local Room cache gets added later (general_idea.md's offline-first
+ * data source because it's the seam where a local Room cache gets added later (GENERAL_IDEA.md's offline-first
  * "Smart Cache" idea) without presentation code needing to change.
  */
 interface TmdbRepository {

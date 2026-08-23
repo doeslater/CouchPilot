@@ -2,10 +2,7 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 
 **Free API & Tech Stack**
 
-* **Data Sources (100% Free):**
-* **TVmaze API:** Free, no-key required. Supports schedule filtering specifically for UK broadcasts (e.g., BBC, ITV, Channel 4, Sky).
-* **TMDB API (The Movie Database):** Free non-commercial API key. Used for pulling trending titles, deep metadata, posters, and UK "watch providers" (iPlayer, Netflix UK, etc.).
-* **Watchmode API:** Provides granular UK streaming availability (formats, pricing, and direct links) for any TV show or movie.
+* **Data Sources (100% Free):** TVmaze (UK broadcast schedule), TMDB (trending titles, metadata, posters, watch providers), Watchmode (granular UK streaming availability) — see Part 2 below for what each is best for, pricing, and a comparison matrix.
 
 
 * **On-Device Recommendation Engine:**
