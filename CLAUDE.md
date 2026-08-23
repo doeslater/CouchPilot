@@ -11,7 +11,8 @@ deep-links into UK catch-up apps like iPlayer/ITVX/Channel 4/My5, and no externa
 `ROADMAP.md` tracks the phased build-out from the original bare-template skeleton to the current app — all
 eight planned phases are done, plus post-roadmap feature work tracked as checkbox items in its Status section.
 Current shape: five bottom-nav tabs (Tonight — a 7-day UK broadcast schedule ranked by on-device taste;
-Discover — TMDB trending shows filterable by watch provider; Search — direct title lookup for UK streaming
+Discover — TMDB trending shows filterable by watch provider, plus curated UK collection rows shown
+only when unfiltered; Search — direct title lookup for UK streaming
 availability via Watchmode (bridges to `ShowDetailScreen` for TV shows mapped to TMDB); Bookmarks — a live
 grid of shows explicitly saved for later via `ShowDetailScreen`'s heart toggle; Settings — clear all local
 data / reset onboarding), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider "open app"
@@ -158,6 +159,13 @@ skipped).
     check that source's items actually carry TMDB integer genre IDs before calling `score()` — TVmaze exposes
     free-text genre names, a different vocabulary the scorer can't use directly (see `TonightViewModel`'s
     `enrichSchedule()` for the TMDB-bridge pattern that resolves this).
+  - `discover/domain/UkCultureCollections.kt` — curated Discover rows ("Bingeable Box Sets," etc.)
+    defined as `(title, genreId, minVoteCount)`, resolved live via `TmdbRepository.discoverByGenre()`
+    (TMDB `/discover/tv` with `with_origin_country=GB` + `with_genres` + `vote_count.gte`) — not a
+    hardcoded show-id list, so it self-refreshes as TMDB's own vote data changes. Rendered only when
+    `DiscoverUiState.Success.selectedProviderId == null`: showing them while a provider filter is
+    active buried the actually-filtered grid below several rows of unchanged content, making a
+    working filter look broken (a real usability bug, found and fixed after shipping this feature).
   - `bookmarks/data/local/{BookmarkEntity,BookmarkDao}.kt` — a "save for later" signal, kept deliberately
     separate from `SwipeEventEntity` and out of `RecommendationScorer` (bookmarking isn't a taste signal).
     No repository layer: `ShowDetailViewModel` and `BookmarksViewModel` inject `BookmarkDao` directly, the

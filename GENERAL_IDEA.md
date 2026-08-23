@@ -47,6 +47,10 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 * A heart toggle on a show's detail screen saves it to a local "Bookmarks" list, browsable from its own bottom-nav tab.
 * Kept deliberately separate from the up/downvote taste signal — bookmarking means "I want to come back to this," not a genre preference, so it doesn't feed the recommendation engine.
 
+* **7. UK Culture Collections**
+* Discover shows curated rows above the trending grid — "Bingeable Box Sets," "Award-Winning British Dramas," "Panel Shows & Comedy," "Best of British Docs" — only when no provider filter is active.
+* Each collection is a live TMDB query (GB-origin shows in a genre, sorted by rating, above a minimum vote count), not a hardcoded show list — self-refreshing as TMDB's own data changes, no manual upkeep.
+
 **Development Notes**
 
 * Load Android API skills when working on platform-specific code.
@@ -109,15 +113,14 @@ listed below as a freemium alternative worth knowing about if Watchmode's free t
 
 Ideas for future phases, grouped by theme and deduplicated from earlier brainstorming — the current app only
 implements the "Core Concept Ideas & Features" above (see `ROADMAP.md` for what's actually built).
-Backlog items move up into that list once they ship, as Bookmarking (item 6) just did.
+Backlog items move up into that list once they ship, as Bookmarking (item 6) and UK Culture
+Collections (item 7) just did.
 
 ### Discovery & Curation
 
-* **"Time Budget" Dial:** Filter content by available viewing time, from a 20-minute comedy short to a full 90-minute film.
-* **"Mood & Vibe" Selector:** Replace genre tags with natural-language moods like *"British Cozy Crime,"* *"Mind-Bending Thriller,"* or *"Lightweight Background TV."* Can be combined with the Time Budget Dial into a single "Mood & Time" quiz.
+* **"Mood & Vibe" Selector:** Replace genre tags with natural-language moods like *"British Cozy Crime,"* *"Mind-Bending Thriller,"* or *"Lightweight Background TV."*
 * **Live Freeview EPG Highlights:** A "What's On Right Now" feed across linear UK channels (BBC One, ITV1, Channel 4, Channel 5) alongside streaming picks.
 * **Spoiler-Free Episode Tracker:** Tracks watched episodes across multi-series shows without revealing episode titles, thumbnails, or synopses that give away plot twists.
-* **UK Culture Collections:** Curated categories around national viewing habits — *"Bingeable Box Sets,"* *"Award-Winning British Dramas,"* *"Panel Shows & Comedy,"* *"Best of British Docs."*
 * **"Trending in the UK Today":** A daily top-10 list reflecting what's actively trending across British streaming charts and social conversation.
 * **"Best of British" Sub-Genre Deep Dives:** Niche categorizations beyond standard genres — *Cozy British Murder Mystery* (*Death in Paradise*, *Midsomer Murders*), *Witty Panel Shows & Stand-up* (*Taskmaster*, *Would I Lie to You?*), *Post-Pub Background Comedy* (*Peep Show*, *The Inbetweeners*), *Gritty Northern Crime Dramas* (*Happy Valley*, *Sherwood*).
 * **BFI & Cult Classic Picks:** Archive British television, forgotten 90s/00s miniseries, and critically acclaimed UK indie films.
@@ -137,14 +140,12 @@ Backlog items move up into that list once they ship, as Bookmarking (item 6) jus
 * **"Freely" & Freeview Broadband Grid:** A live broadband-based EPG grid combining traditional Freeview channels with IP-streamed live stations.
 * **Ad-Tier vs. Premium Catalog Mapping:** Marks whether a recommended show is free-with-ads or behind a paid ad-free tier (e.g., ITVX Premium, Netflix Standard with Ads vs. Premium), including extra catalogue access like BritBox content.
 * **FAST Channel Aggregator:** Integrates linear FAST streams (Pluto TV, Tubi, Samsung TV Plus) alongside traditional Freeview schedules.
-* **Regional Freeview Channel Filter:** Customizes live EPG listings by UK nation/region (BBC One Scotland, ITV Wales, STV Player) so schedules and local news match the viewer's transmission zone.
 
 ### Compliance, Personalization & Alerts
 
 * **Watchlist & Provider Toggle:** Users tick off streaming subscriptions they pay for so the app hides content locked behind paywalls they don't have.
 * **Post-Watershed & BBFC/Ofcom Controls:** Filters recommendations using Ofcom watershed rules and official BBFC ratings (U, PG, 12, 15, 18); mature content can stay locked until after 21:00 unless unlocked via biometric auth.
 * **"Ditch or Keep" Prompt:** If a user stops halfway through an episode or film, ask whether to keep it active or drop it from recommendations.
-* **Series Return Notifications:** Alerts when a new series of a saved favorite drops (e.g., *The Traitors*, *Line of Duty*, *Doctor Who*).
 * **TV Licence Compliance Filter:** A soft toggle ("I have a UK TV Licence") that suppresses BBC iPlayer and live TV suggestions when disabled, while keeping non-BBC ad-supported platforms (ITVX, Channel 4, My5, Tubi) available.
 * **Season Catch-up Calculator:** Calculates episodes-per-night needed to finish previous seasons before a new one premieres.
 * **Smart "Where Did I Leave Off?" Hub:** Tracks manual episode progress across fragmented apps without needing account integration for every service.

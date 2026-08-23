@@ -196,6 +196,54 @@ of work, and update the checkboxes below as phases land.
       - Verified: `./gradlew testDebugUnitTest` (full suite) and `assembleDebug` both clean; on a
         connected device (`Pixel 6 - 17`), `./gradlew connectedDebugAndroidTest` passes clean too
         (12 tests: the pre-existing 7 plus the new `BookmarkDaoTest`'s 5, 0 failures/errors/skipped).
+- [x] **UK Culture Collections** — GENERAL_IDEA.md's Feature Backlog item promoted to a real
+      feature: curated rows on Discover ("Bingeable Box Sets," "Award-Winning British Dramas,"
+      "Panel Shows & Comedy," "Best of British Docs") above the trending grid.
+      - **First pass was hardcoded, then replaced with a dynamic query** (both within this same
+        item, before it ever shipped past this branch). Landed first as
+        `discover/domain/UkCultureCollections.kt` holding 4 hand-picked lists of real TMDB show
+        ids (verified against the live TMDB API at the time, not guessed) — same "hand-maintained
+        reference list" pattern as `tvmaze/domain/FreeviewChannels.kt`. When asked directly
+        whether these were hardcoded, and then whether they could be dynamic instead: yes — TMDB's
+        `/discover/tv` already supports `with_origin_country=GB` + `with_genres` +
+        `vote_count.gte`, verified live via curl against the real API before committing to the
+        rewrite (e.g. genre=Drama(18)+votes≥300 → Heartstopper, Peaky Blinders, Sherlock, Black
+        Mirror; genre=Documentary(99)+votes≥100 → Blue Planet II, Planet Earth II, Our Planet).
+        `UkCultureCollection` now holds `(title, genreId, minVoteCount)` instead of a show-id list
+        - 4 tuples instead of 15 ids, and self-refreshing forever instead of going stale. Landed as
+        a new `TmdbService.discoverTvByGenre()` (a sibling method to the existing provider-based
+        `discoverTv()`, not more params bolted onto it, since it's a genuinely different discover
+        mode with no watch-provider params at all), threaded through
+        `RetrofitTmdbRemoteDataSource`/`TmdbRepository.discoverByGenre()`/`DefaultTmdbRepository`
+        (deliberately *not* passed through `rankShows()` - collections read as "generally
+        acclaimed," not re-sorted by this user's personal taste). `DiscoverViewModel.
+        loadCollections()` now fires one `discoverByGenre` call per collection (concurrently)
+        instead of one `getTvShowById()` call per hardcoded id.
+      - **Real bug found via direct usability feedback, not testing**: after the collections
+        landed, tapping a different provider filter chip appeared to do nothing - "the chips don't
+        work." Root cause: the 3-4 static collection rows dominated the visible viewport right
+        below the chip row, and they didn't change with the filter (by design - they're
+        provider-agnostic), so the *actual* filtered grid (which was working correctly the whole
+        time) was scrolled out of view, making a working filter look broken. Confirmed via
+        screenshots: selecting BBC iPlayer vs. ITVX vs. UKTV Play showed pixel-identical visible
+        content, only the chip highlight differed. Fixed by only rendering collections when no
+        provider filter is active (`state.selectedProviderId == null`); any specific provider chip
+        now immediately surfaces real filtered results at the top of the screen.
+      - Also fixed getting here: an earlier version nested a `LazyVerticalGrid` inside a
+        `verticalScroll` `Column` to stack collections above the grid, which doesn't measure (a
+        `LazyVerticalGrid` needs a bounded height, an infinite-height scrolling parent can't give
+        it one) - replaced with a single `LazyVerticalGrid` where each collection row is a
+        full-span (`GridItemSpan(maxLineSpan)`) item, followed by the normal one-cell poster items.
+      - New `DefaultTmdbRepositoryTest` cases (`discoverByGenre` maps the response correctly; does
+        not touch the recommendation scorer), `DiscoverViewModelTest` cases (collection hydration,
+        a failed genre query dropping only that collection, collections surviving a provider filter
+        change).
+      - Verified: `./gradlew testDebugUnitTest assembleDebug connectedDebugAndroidTest` all clean
+        (12/12 instrumented, unchanged by this feature). On-device (`Pixel 6 - 17`): all 4
+        collections confirmed rendering real, correctly-genred shows matching the curl-verified
+        predictions exactly; tapping a collection poster still opens `ShowDetailScreen`; confirmed
+        the chip-visibility fix across All → BBC iPlayer → ITVX, each now showing real filtered
+        content immediately with no stale rows in the way.
 
 ### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
 **Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.

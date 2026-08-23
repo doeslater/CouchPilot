@@ -95,6 +95,15 @@ class DefaultTmdbRepository @Inject constructor(
         }
     }
 
+    // Deliberately not passed through rankShows() - collections are meant to read as "generally
+    // acclaimed," not re-sorted by this user's personal taste vector the way trending/discover-
+    // by-provider are.
+    override suspend fun discoverByGenre(genreId: Int, minVoteCount: Int): Result<List<TvShow>, DataError> {
+        return remoteDataSource.discoverTvByGenre(genreId, minVoteCount).map { dto ->
+            dto.results.map { it.toTvShow() }
+        }
+    }
+
     override suspend fun search(query: String): Result<List<TvShow>, DataError> = coroutineScope {
         val tvDeferred = async { remoteDataSource.searchTv(query) }
         val movieDeferred = async { remoteDataSource.searchMovie(query) }

@@ -32,6 +32,18 @@ interface TmdbService {
         @Header("Authorization") authHeader: String
     ): Response<TrendingTvShowsResponseDto>
 
+    // Separate method (not more params bolted onto discoverTv above) since this filters by
+    // genre + origin country, not by watch provider - a different discover "mode" with no
+    // watch_provider/monetization params at all, for UkCultureCollections.kt's dynamic collections.
+    @GET(AppEndpoint.Tmdb.DISCOVER_TV)
+    suspend fun discoverTvByGenre(
+        @Query("with_origin_country") originCountry: String,
+        @Query("with_genres") genreId: String,
+        @Query("vote_count.gte") minVoteCount: Int,
+        @Query("sort_by") sortBy: String = "vote_average.desc",
+        @Header("Authorization") authHeader: String
+    ): Response<TrendingTvShowsResponseDto>
+
     @GET(AppEndpoint.Tmdb.FIND_EXTERNAL)
     suspend fun findByExternalId(
         @Path("external_id") externalId: String,

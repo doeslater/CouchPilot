@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -42,7 +44,7 @@ import com.example.couchpilot.tmdb.domain.WatchProvider
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DiscoverScreen(
-    // originProviderName is null unless a specific chip (not "All") is selected - lets
+    // originProviderName is null unless a specific chip (not "Collections") is selected - lets
     // ShowDetailScreen offer a CTA back to that same provider (see Route.ShowDetail's doc).
     onShowClick: (id: Int, originProviderName: String?) -> Unit,
     viewModel: DiscoverViewModel = hiltViewModel(),
@@ -78,13 +80,30 @@ fun DiscoverScreen(
                     ProviderSelector(
                         providers = state.providers,
                         selectedId = state.selectedProviderId,
-                        onProviderClick = { viewModel.selectProvider(it) }
+                        isClassicSelected = state.isClassicSelected,
+                        onProviderClick = { viewModel.selectProvider(it) },
+                        onClassicClick = { viewModel.selectClassic() }
                     )
                     val selectedProviderName = state.providers
                         .firstOrNull { it.id == state.selectedProviderId }
                         ?.name
+                    // Collections are curated, provider-agnostic picks - showing them while a
+                    // specific provider chip is selected buried the actually-filtered results
+                    // below several rows of unchanged content, making the filter look broken (it
+                    // wasn't - the grid below was filtering correctly the whole time, just out of
+                    // view). Only show them for "Collections" so tapping a chip immediately
+                    // surfaces the real filtered grid at the top of the screen. "All" also
+                    // suppresses them deliberately - it's the explicit opt-out into the
+                    // pre-collections screen.
+                    val visibleCollections =
+                        if (state.selectedProviderId == null && !state.isClassicSelected) state.collections
+                        else emptyList()
                     TrendingGrid(
+                        collections = visibleCollections,
                         shows = state.shows,
+                        // Collection rows aren't provider-chip-scoped, so a tap from one never
+                        // carries an originProviderName CTA - only the grid below does.
+                        onCollectionShowClick = { show -> onShowClick(show.id, null) },
                         onShowClick = { show -> onShowClick(show.id, selectedProviderName) }
                     )
                 }
@@ -97,7 +116,9 @@ fun DiscoverScreen(
 private fun ProviderSelector(
     providers: List<WatchProvider>,
     selectedId: Int?,
+    isClassicSelected: Boolean,
     onProviderClick: (Int?) -> Unit,
+    onClassicClick: () -> Unit,
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
@@ -106,8 +127,18 @@ private fun ProviderSelector(
     ) {
         item {
             FilterChip(
-                selected = selectedId == null,
+                selected = selectedId == null && !isClassicSelected,
                 onClick = { onProviderClick(null) },
+                label = { Text("Collections") }
+            )
+        }
+        item {
+            // The original pre-collections Discover screen, for anyone who preferred that simpler
+            // view - same unfiltered trending query as "Collections", the rows themselves just
+            // deliberately hidden (see DiscoverScreen's visibleCollections comment).
+            FilterChip(
+                selected = isClassicSelected,
+                onClick = onClassicClick,
                 label = { Text("All") }
             )
         }
@@ -135,9 +166,15 @@ private fun ProviderSelector(
     }
 }
 
+// One grid, not a scrollable Column wrapping a separate LazyVerticalGrid - nesting two
+// independently-scrollable vertical containers doesn't measure (a LazyVerticalGrid needs a
+// bounded height, which a verticalScroll Column's infinite height can't give it). Collection
+// rows are rendered as full-span grid items so they and the poster grid share one scroll.
 @Composable
 private fun TrendingGrid(
+    collections: List<DiscoverCollection>,
     shows: List<TvShow>,
+    onCollectionShowClick: (TvShow) -> Unit,
     onShowClick: (TvShow) -> Unit,
 ) {
     LazyVerticalGrid(
@@ -147,11 +184,44 @@ private fun TrendingGrid(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        collections.forEach { collection ->
+            if (collection.shows.isNotEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    CollectionRow(collection = collection, onShowClick = onCollectionShowClick)
+                }
+            }
+        }
         items(shows, key = { it.id }) { show ->
             ShowPoster(
                 show = show,
                 modifier = Modifier.clickable { onShowClick(show) }
             )
+        }
+    }
+}
+
+@Composable
+private fun CollectionRow(
+    collection: DiscoverCollection,
+    onShowClick: (TvShow) -> Unit,
+) {
+    Column {
+        Text(
+            text = collection.title,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+        )
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(collection.shows, key = { it.id }) { show ->
+                ShowPoster(
+                    show = show,
+                    modifier = Modifier
+                        .width(110.dp)
+                        .clickable { onShowClick(show) }
+                )
+            }
         }
     }
 }

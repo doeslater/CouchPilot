@@ -30,7 +30,7 @@ sealed interface Route {
      * provider-filtered grid (a specific chip was selected) - it carries that provider's
      * name (matching AppLauncher's map keys) so ShowDetailScreen can offer a CTA back to
      * that same provider, instead of just the generic "Available on" list. Null for any
-     * other entry point (Tonight, Onboarding's info button, or Discover with "All" selected).
+     * other entry point (Tonight, Onboarding's info button, or Discover with "Collections" selected).
      */
     @Serializable
     data class ShowDetail(val id: Int, val originProviderName: String? = null) : Route

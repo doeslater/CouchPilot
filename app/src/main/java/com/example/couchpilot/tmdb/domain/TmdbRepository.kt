@@ -16,4 +16,9 @@ interface TmdbRepository {
     suspend fun getTvShowById(id: Int): Result<TvShow?, DataError>
     suspend fun getWatchProvidersForShow(tvId: Int): Result<List<WatchProvider>, DataError>
     suspend fun search(query: String): Result<List<TvShow>, DataError>
+
+    /** GB-origin shows in [genreId], sorted by vote_average desc, filtered to at least
+     *  [minVoteCount] votes so obscure/low-signal entries don't win purely on a small sample -
+     *  powers Discover's UK Culture Collections (`discover/domain/UkCultureCollections.kt`). */
+    suspend fun discoverByGenre(genreId: Int, minVoteCount: Int): Result<List<TvShow>, DataError>
 }

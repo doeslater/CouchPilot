@@ -11,13 +11,15 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 | Loads the day's schedule, bridges TVmaze items to TMDB (`enrichSchedule()`) for posters/genre ids, re-ranks via `RecommendationScorer`. | `tonight/presentation/TonightViewModel.kt` |
 | `Loading` / `Success(days, selectedDay, schedule)` / `Error`. | `tonight/presentation/TonightUiState.kt` |
 
-## Discover — TMDB trending shows, filterable by watch provider
+## Discover — TMDB trending shows, filterable by watch provider, plus curated UK collections
 
 | Role | File |
 | --- | --- |
-| UI: provider filter chips + trending poster grid. | `discover/presentation/DiscoverScreen.kt` |
-| Loads providers + trending shows concurrently, re-fetches on provider filter change (with job-cancellation for rapid taps). | `discover/presentation/DiscoverViewModel.kt` |
-| `Loading` / `Success(shows, providers, selectedProviderId)` / `Error`. | `discover/presentation/DiscoverUiState.kt` |
+| UI: provider filter chips + trending poster grid; curated collection rows (full-span grid items) shown only when no provider filter is active. | `discover/presentation/DiscoverScreen.kt` |
+| Loads providers + trending shows + curated collections concurrently; re-fetches trending on provider filter change (preserving collections, job-cancellation for rapid taps). | `discover/presentation/DiscoverViewModel.kt` |
+| `Loading` / `Success(shows, providers, selectedProviderId, collections)` / `Error`; `DiscoverCollection(title, shows)`. | `discover/presentation/DiscoverUiState.kt` |
+| 4 collection definitions (`title, genreId, minVoteCount`) - drives a live TMDB genre+GB-origin query, not a hardcoded show list. | `discover/domain/UkCultureCollections.kt` |
+| Collections hydration + provider-filter tests. | `discover/presentation/DiscoverViewModelTest.kt` (test) |
 
 ## Search — direct title lookup for UK streaming availability (Watchmode)
 
@@ -135,8 +137,8 @@ for the concept behind each feature and `ROADMAP.md` for the phase/history each 
 
 | Role | File |
 | --- | --- |
-| Domain contract + models. | `tmdb/domain/{TmdbRepository,TvShow,WatchProvider}.kt` |
-| Cache-then-refresh impl (Room cache + TMDB network). | `tmdb/data/DefaultTmdbRepository.kt` |
+| Domain contract + models, incl. `discoverByGenre(genreId, minVoteCount)` for Discover's UK Culture Collections. | `tmdb/domain/{TmdbRepository,TvShow,WatchProvider}.kt` |
+| Cache-then-refresh impl (Room cache + TMDB network); `discoverByGenre` bypasses taste-based ranking on purpose. | `tmdb/data/DefaultTmdbRepository.kt` |
 | Retrofit network layer. | `tmdb/data/RetrofitTmdbRemoteDataSource.kt`, `TmdbService.kt` |
 | DTO↔domain↔entity mapping; poster/backdrop URL building. | `tmdb/data/TvShowMappers.kt`, `TmdbImages.kt` |
 | Wire-format DTOs. | `tmdb/data/dto/{TvShowDto,FindByIdResponseDto,ShowWatchProvidersDto,WatchProviderDto,TmdbSearchDto}.kt` |

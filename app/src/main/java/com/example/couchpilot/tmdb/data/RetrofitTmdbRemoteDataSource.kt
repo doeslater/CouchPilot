@@ -44,6 +44,21 @@ class RetrofitTmdbRemoteDataSource @Inject constructor(
         }
     }
 
+    suspend fun discoverTvByGenre(
+        genreId: Int,
+        minVoteCount: Int,
+        originCountry: String = DEFAULT_REGION
+    ): Result<TrendingTvShowsResponseDto, DataError.Network> {
+        return safeCall {
+            tmdbService.discoverTvByGenre(
+                originCountry = originCountry,
+                genreId = genreId.toString(),
+                minVoteCount = minVoteCount,
+                authHeader = "Bearer ${BuildConfig.TMDB_READ_ACCESS_TOKEN}"
+            )
+        }
+    }
+
     suspend fun findByExternalId(externalId: String): Result<com.example.couchpilot.tmdb.data.dto.FindByIdResponseDto, DataError.Network> {
         return safeCall {
             tmdbService.findByExternalId(
