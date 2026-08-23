@@ -16,6 +16,10 @@ sealed interface Route {
     @Serializable
     data object Settings : Route
 
+    /** Bottom-nav tab listing every show the user has bookmarked (saved for later). */
+    @Serializable
+    data object Bookmarks : Route
+
     @Serializable
     data object Onboarding : Route
 

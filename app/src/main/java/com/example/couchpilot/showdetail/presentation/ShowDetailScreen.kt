@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,9 +80,11 @@ fun ShowDetailScreen(
                         providers = state.providers,
                         userVote = state.userVote,
                         originProviderName = state.originProviderName,
+                        isBookmarked = state.isBookmarked,
                         onProviderClick = { viewModel.onProviderClick(context, it) },
                         onOriginProviderClick = { viewModel.onOriginProviderClick(context) },
-                        onVote = viewModel::onVote
+                        onVote = viewModel::onVote,
+                        onToggleBookmark = viewModel::onToggleBookmark
                     )
                 }
             }
@@ -94,9 +98,11 @@ private fun ShowDetailContent(
     providers: List<WatchProvider>,
     userVote: Boolean?,
     originProviderName: String?,
+    isBookmarked: Boolean,
     onProviderClick: (WatchProvider) -> Unit,
     onOriginProviderClick: () -> Unit,
-    onVote: (Boolean) -> Unit
+    onVote: (Boolean) -> Unit,
+    onToggleBookmark: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -119,6 +125,14 @@ private fun ShowDetailContent(
                     style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.weight(1f)
                 )
+                IconButton(onClick = onToggleBookmark) {
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark this show",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.primary
+                               else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 // Material's icon-core artifact doesn't include ThumbUp/ThumbDown outline
                 // variants (only material-icons-extended does, which we're deliberately not
                 // pulling in for two icons) - plain emoji glyphs instead, tinted to show the vote.

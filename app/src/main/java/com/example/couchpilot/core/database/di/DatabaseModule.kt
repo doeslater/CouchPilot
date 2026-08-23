@@ -2,6 +2,7 @@ package com.example.couchpilot.core.database.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.couchpilot.bookmarks.data.local.BookmarkDao
 import com.example.couchpilot.core.database.CouchPilotDatabase
 import com.example.couchpilot.tmdb.data.local.TvShowDao
 import com.example.couchpilot.tvmaze.data.local.ScheduleDao
@@ -42,5 +43,11 @@ object DatabaseModule {
     @Singleton
     fun provideSwipeEventDao(db: CouchPilotDatabase): com.example.couchpilot.onboarding.data.local.SwipeEventDao {
         return db.swipeEventDao
+    }
+
+    @Provides
+    @Singleton
+    fun provideBookmarkDao(db: CouchPilotDatabase): BookmarkDao {
+        return db.bookmarkDao
     }
 }

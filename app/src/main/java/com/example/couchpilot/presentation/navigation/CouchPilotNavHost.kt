@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -29,6 +30,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.couchpilot.bookmarks.presentation.BookmarksScreen
 import com.example.couchpilot.discover.presentation.DiscoverScreen
 import com.example.couchpilot.onboarding.presentation.OnboardingScreen
 import com.example.couchpilot.presentation.MainViewModel
@@ -44,6 +46,7 @@ private val topLevelTabs = listOf(
     TopLevelTab(Route.Tonight, "Tonight", Icons.Filled.Home),
     TopLevelTab(Route.Discover, "Discover", Icons.Filled.Star),
     TopLevelTab(Route.Search, "Search", Icons.Filled.Search),
+    TopLevelTab(Route.Bookmarks, "Bookmarks", Icons.Filled.Favorite),
     TopLevelTab(Route.Settings, "Settings", Icons.Filled.Settings),
 )
 
@@ -117,6 +120,9 @@ fun CouchPilotNavHost(
                     // gets the same taste-scoring/vote/dwell-time treatment as any other show.
                     onNavigateToShowDetail = { tmdbId -> navController.navigate(Route.ShowDetail(tmdbId)) }
                 )
+            }
+            composable<Route.Bookmarks> {
+                BookmarksScreen(onShowClick = { id -> navController.navigate(Route.ShowDetail(id)) })
             }
             composable<Route.Settings> {
                 SettingsScreen(onViewProfile = { navController.navigate(Route.Profile) })

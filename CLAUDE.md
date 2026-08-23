@@ -9,14 +9,17 @@ concept: TVmaze/TMDB/Watchmode as free data sources, an on-device recommendation
 deep-links into UK catch-up apps like iPlayer/ITVX/Channel 4/My5, and no external user accounts).
 
 `ROADMAP.md` tracks the phased build-out from the original bare-template skeleton to the current app — all
-eight planned phases are done. Current shape: four bottom-nav tabs (Tonight — a 7-day UK broadcast schedule
-ranked by on-device taste; Discover — TMDB trending shows filterable by watch provider; Search — direct
-title lookup for UK streaming availability via Watchmode (bridges to `ShowDetailScreen` for TV shows
-mapped to TMDB); Settings — clear all local data / reset onboarding), a swipe-based onboarding flow,
-a `ShowDetailScreen` with watch-provider "open app" buttons, a Watchmode "check all sources" link,
-and explicit up/downvote, and a plain-Kotlin cosine-similarity recommendation engine fed by
-swipe/vote/dwell-time signals. Firebase AI Logic and the template's "Baking" sample were removed in Phase 1 —
-nothing in `general_idea.md` calls for an AI model, so don't re-add that dependency without a real reason.
+eight planned phases are done, plus post-roadmap feature work tracked as checkbox items in its Status section.
+Current shape: five bottom-nav tabs (Tonight — a 7-day UK broadcast schedule ranked by on-device taste;
+Discover — TMDB trending shows filterable by watch provider; Search — direct title lookup for UK streaming
+availability via Watchmode (bridges to `ShowDetailScreen` for TV shows mapped to TMDB); Bookmarks — a live
+grid of shows explicitly saved for later via `ShowDetailScreen`'s heart toggle; Settings — clear all local
+data / reset onboarding), a swipe-based onboarding flow, a `ShowDetailScreen` with watch-provider "open app"
+buttons, a Watchmode "check all sources" link, explicit up/downvote, a bookmark toggle, and a plain-Kotlin
+cosine-similarity recommendation engine fed by swipe/vote/dwell-time signals (bookmarking is deliberately
+*not* one of those signals — see `bookmarks/data/local/BookmarkEntity.kt`'s doc comment). Firebase AI Logic
+and the template's "Baking" sample were removed in Phase 1 — nothing in `general_idea.md` calls for an AI
+model, so don't re-add that dependency without a real reason.
 
 ## Build / lint / test commands
 
@@ -86,7 +89,8 @@ skipped).
     cheaper than `mockkStatic`-ing every such call, or pulling in Robolectric.
 - **Navigation:** `androidx.navigation:navigation-compose` with `kotlinx.serialization`-backed type-safe
   routes (not string routes) — `presentation/navigation/Route.kt` (sealed `Route` with `@Serializable` data
-  objects/classes: `Tonight`, `Discover`, `Settings`, `Onboarding`, `ShowDetail(id: Int)`) and
+  objects/classes: `Tonight`, `Discover`, `Search`, `Bookmarks`, `Settings`, `Onboarding`, `Profile`,
+  `ShowDetail(id: Int, originProviderName: String? = null)`) and
   `presentation/navigation/CouchPilotNavHost.kt` (bottom-tab `Scaffold` + `NavHost`, `composable<Route.X> { ... }`,
   bottom bar hidden on `Onboarding`). Add new top-level screens as another `Route` + `TopLevelTab` entry there;
   add detail-style screens as a `Route` with no tab entry, wired into the `NavHost` block directly.
@@ -116,7 +120,7 @@ skipped).
   Retrofit `Response<T>` + exceptions into a typed `Result<T, DataError.Network>` — reuse this for any new
   remote call rather than hand-rolling try/catch.
 - **Persistence:** Room (`core/database/CouchPilotDatabase.kt`, `@Database`) is the single DB for
-  `TvShowEntity`, `ScheduleItemEntity`, `SwipeEventEntity`, opened via `.fallbackToDestructiveMigration()`
+  `TvShowEntity`, `ScheduleItemEntity`, `SwipeEventEntity`, `BookmarkEntity`, opened via `.fallbackToDestructiveMigration()`
   (`core/database/di/DatabaseModule.kt`) — **bump `version` on every entity schema change**, or the app crashes
   on launch with `Room cannot verify the data integrity`; with destructive migration this also means a version
   bump wipes all local data on next launch, which is expected/fine pre-release but worth remembering when
@@ -155,6 +159,15 @@ skipped).
     check that source's items actually carry TMDB integer genre IDs before calling `score()` — TVmaze exposes
     free-text genre names, a different vocabulary the scorer can't use directly (see `TonightViewModel`'s
     `enrichSchedule()` for the TMDB-bridge pattern that resolves this).
+  - `bookmarks/data/local/{BookmarkEntity,BookmarkDao}.kt` — a "save for later" signal, kept deliberately
+    separate from `SwipeEventEntity` and out of `RecommendationScorer` (bookmarking isn't a taste signal).
+    No repository layer: `ShowDetailViewModel` and `BookmarksViewModel` inject `BookmarkDao` directly, the
+    same way they inject `SwipeEventDao` — a single local DAO with no second data source to coordinate
+    doesn't earn a `*Repository`/`*Manager` wrapper (see "Data Source vs Repository" below).
+    `BookmarksViewModel` collects `BookmarkDao.getAllBookmarks()` with `collectLatest` and hydrates each
+    `showId` via `TmdbRepository.getTvShowById()` concurrently (`async`/`awaitAll`, same shape as
+    `TonightViewModel.enrichSchedule()`); a show whose lookup fails is silently dropped from the grid
+    rather than failing the whole screen.
   - **Data Source vs Repository:** a class that talks to one data source (one remote API, one DB) is a
     `*DataSource`; only a class that itself coordinates multiple data sources (e.g. remote + local cache, or
     Room + DataStore) should be called a `*Repository`/`*Manager`. If this app grows past its current handful

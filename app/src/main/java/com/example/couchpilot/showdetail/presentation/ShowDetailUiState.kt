@@ -15,7 +15,10 @@ sealed interface ShowDetailUiState {
         // website search mapped for that provider - see Route.ShowDetail's doc comment. Drives
         // ShowDetailScreen's chip-origin CTA; absent otherwise so the screen doesn't render a
         // button that would just silently no-op when tapped.
-        val originProviderName: String? = null
+        val originProviderName: String? = null,
+        // Loaded alongside the show/providers in loadShowDetails() and flipped by
+        // onToggleBookmark() - independent of userVote, since "save for later" isn't a taste signal.
+        val isBookmarked: Boolean = false
     ) : ShowDetailUiState
     data class Error(val message: String) : ShowDetailUiState
 }

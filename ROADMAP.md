@@ -170,6 +170,40 @@ of work, and update the checkboxes below as phases land.
       originally written ("tap Netflix, browser opens to Netflix search for the show") only
       actually exercises this fix if Netflix isn't installed on the test device — hasn't been
       re-run on-device since landing; do that before considering this fully closed out.
+- [x] **Bookmark a show** — general_idea.md's Feature Backlog item promoted to a real feature: a
+      user can save a show for later independent of the up/downvote taste signal, and browse
+      everything saved from a new bottom-nav tab.
+      - New `bookmarks/data/local/{BookmarkEntity,BookmarkDao}.kt` — a `bookmarks` Room table keyed
+        directly on `showId` (no autogenerate id; a show is either bookmarked or not, there's no
+        history of repeat events the way swipes have). `CouchPilotDatabase` bumped version 6 → 7 to
+        add it (destructive migration, same as every prior schema change — wipes local data on next
+        launch, expected pre-release). No repository layer added: both new/changed ViewModels inject
+        `BookmarkDao` directly, the same convention `SwipeEventDao` already used.
+      - `ShowDetailUiState.Success` gained `isBookmarked`, loaded alongside the show/providers in
+        `loadShowDetails()` and flipped by a new `onToggleBookmark()`; `ShowDetailScreen` got a heart
+        icon button next to the existing 👍/👎 row. Deliberately real icons this time, not the
+        emoji-`Text()` fallback the thumbs use — checked first via `unzip -l` on the actual
+        `material-icons-core` jar, and `Icons.Filled.Favorite`/`FavoriteBorder` (unlike
+        `Bookmark`/`ThumbDown`) really are in core, so no fallback was needed.
+      - New `bookmarks/presentation/{BookmarksUiState,BookmarksViewModel,BookmarksScreen}.kt` — a
+        poster grid (same shape as Discover's `TrendingGrid`/`ShowPoster`) reached via a 5th
+        bottom-nav tab (`Route.Bookmarks`, between Search and Settings — chosen over hanging it off
+        Settings like `Profile`, so it's always one tap away). `BookmarksViewModel` collects
+        `BookmarkDao.getAllBookmarks()` with `collectLatest` and hydrates each id through
+        `TmdbRepository.getTvShowById()` concurrently (`async`/`awaitAll`, same shape as
+        `TonightViewModel.enrichSchedule()`), so toggling a bookmark on `ShowDetailScreen` is
+        reflected here live without re-entering the screen; a show whose lookup fails is dropped
+        rather than erroring the whole grid, and bookmark-recency order (the DAO's own `ORDER BY
+        timestamp DESC`) is preserved through the concurrent hydration.
+      - New `BookmarkDaoTest` (instrumented, in-memory Room DB, same shape as `SwipeEventDaoTest`),
+        new `BookmarksViewModelTest` (JVM, `UnconfinedTestDispatcher` + `flowOf(...)`, same shape as
+        `ProfileViewModelTest` — the one existing test in the repo where a ViewModel's state is
+        driven by collecting a DAO `Flow`), and new cases added to `ShowDetailViewModelTest` for the
+        initial bookmark-loaded state and both toggle directions.
+      - Verified: `./gradlew testDebugUnitTest` (full suite) and `assembleDebug` both clean.
+      - **Not yet done**: `connectedDebugAndroidTest` (covers the new `BookmarkDaoTest`) needs a
+        device/emulator, which wasn't available while landing this — run it before considering this
+        fully closed out, same caveat as other DAO tests in this doc.
 
 ### Phase 8 — Watchmode integration, Search tab, Edge-to-Edge, and UI polish ✅ done
 **Goal:** add granular UK streaming data via Watchmode and modernize the app's look and feel.

@@ -46,6 +46,10 @@ Here is an architecture and feature concept for a local-first, privacy-focused U
 * **5. Privacy-Preserving AI Sync**
 * No external user accounts needed. All learning occurs locally via implicit feedback (time spent looking at a show card, saved items) and explicit feedback (upvotes/downvotes).
 
+* **6. Bookmarking**
+* A heart toggle on a show's detail screen saves it to a local "Bookmarks" list, browsable from its own bottom-nav tab.
+* Kept deliberately separate from the up/downvote taste signal — bookmarking means "I want to come back to this," not a genre preference, so it doesn't feed the recommendation engine.
+
 **Development Notes**
 
 * Load Android API skills when working on platform-specific code.
@@ -108,6 +112,7 @@ listed below as a freemium alternative worth knowing about if Watchmode's free t
 
 Ideas for future phases, grouped by theme and deduplicated from earlier brainstorming — the current app only
 implements the "Core Concept Ideas & Features" above (see `ROADMAP.md` for what's actually built).
+Backlog items move up into that list once they ship, as Bookmarking (item 6) just did.
 
 ### Discovery & Curation
 
@@ -140,7 +145,6 @@ implements the "Core Concept Ideas & Features" above (see `ROADMAP.md` for what'
 ### Compliance, Personalization & Alerts
 
 * **Watchlist & Provider Toggle:** Users tick off streaming subscriptions they pay for so the app hides content locked behind paywalls they don't have.
-* **Bookmark a Show:** A single tap on `ShowDetailScreen` saves a title to a local "Watchlist" for later, independent of the existing upvote/downvote signal — stored in Room alongside the swipe/vote history, with a dedicated list (or a Discover/Tonight filter) to browse bookmarked shows and unbookmark them.
 * **Post-Watershed & BBFC/Ofcom Controls:** Filters recommendations using Ofcom watershed rules and official BBFC ratings (U, PG, 12, 15, 18); mature content can stay locked until after 21:00 unless unlocked via biometric auth.
 * **"Ditch or Keep" Prompt:** If a user stops halfway through an episode or film, ask whether to keep it active or drop it from recommendations.
 * **Series Return Notifications:** Alerts when a new series of a saved favorite drops (e.g., *The Traitors*, *Line of Duty*, *Doctor Who*).

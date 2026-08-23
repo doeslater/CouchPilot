@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
+import com.example.couchpilot.bookmarks.data.local.BookmarkDao
+import com.example.couchpilot.bookmarks.data.local.BookmarkEntity
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.onboarding.data.local.SwipeEventDao
 import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
@@ -33,8 +35,9 @@ class ShowDetailViewModel internal constructor(
     private val tmdbRepository: TmdbRepository,
     private val appLauncher: AppLauncher,
     private val swipeEventDao: SwipeEventDao,
-    // Trailing + defaulted so the existing (showId, tmdbRepository, appLauncher, swipeEventDao)
-    // positional test call sites keep compiling unchanged.
+    private val bookmarkDao: BookmarkDao,
+    // Trailing + defaulted so the existing (showId, tmdbRepository, appLauncher, swipeEventDao,
+    // bookmarkDao) positional test call sites keep compiling unchanged.
     private val originProviderName: String? = null
 ) : ViewModel() {
     // savedStateHandle.toRoute() decodes route args via a real android.os.Bundle round-trip,
@@ -46,12 +49,14 @@ class ShowDetailViewModel internal constructor(
         savedStateHandle: SavedStateHandle,
         tmdbRepository: TmdbRepository,
         appLauncher: AppLauncher,
-        swipeEventDao: SwipeEventDao
+        swipeEventDao: SwipeEventDao,
+        bookmarkDao: BookmarkDao
     ) : this(
         savedStateHandle.toRoute<Route.ShowDetail>().id,
         tmdbRepository,
         appLauncher,
         swipeEventDao,
+        bookmarkDao,
         savedStateHandle.toRoute<Route.ShowDetail>().originProviderName
     )
 
@@ -90,6 +95,23 @@ class ShowDetailViewModel internal constructor(
         }
     }
 
+    /** Toggles the bookmark, independent of the up/downvote signal - see [BookmarkEntity]'s doc. */
+    fun onToggleBookmark() {
+        val state = _uiState.value
+        if (state !is ShowDetailUiState.Success) return
+
+        viewModelScope.launch {
+            if (state.isBookmarked) {
+                bookmarkDao.deleteBookmark(state.show.id)
+            } else {
+                bookmarkDao.insertBookmark(BookmarkEntity(showId = state.show.id))
+            }
+            _uiState.update {
+                if (it is ShowDetailUiState.Success) it.copy(isBookmarked = !state.isBookmarked) else it
+            }
+        }
+    }
+
     private fun loadShowDetails() {
         viewModelScope.launch {
             _uiState.value = ShowDetailUiState.Loading
@@ -107,11 +129,13 @@ class ShowDetailViewModel internal constructor(
                     // Only surface the CTA if AppLauncher actually has a website search mapped
                     // for this provider - otherwise it'd render a button that just no-ops.
                     val ctaProviderName = originProviderName?.takeIf { appLauncher.hasWebsiteSearch(it) }
+                    val isBookmarked = bookmarkDao.getBookmark(show.id) != null
 
                     _uiState.value = ShowDetailUiState.Success(
                         show,
                         providers,
-                        originProviderName = ctaProviderName
+                        originProviderName = ctaProviderName,
+                        isBookmarked = isBookmarked
                     )
                     startDwellTracking(show)
                 } else {

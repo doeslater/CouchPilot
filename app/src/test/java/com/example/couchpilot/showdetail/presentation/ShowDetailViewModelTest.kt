@@ -1,5 +1,7 @@
 package com.example.couchpilot.showdetail.presentation
 
+import com.example.couchpilot.bookmarks.data.local.BookmarkDao
+import com.example.couchpilot.bookmarks.data.local.BookmarkEntity
 import com.example.couchpilot.core.domain.Result
 import com.example.couchpilot.onboarding.data.local.SwipeEventDao
 import com.example.couchpilot.onboarding.data.local.SwipeEventEntity
@@ -32,6 +34,7 @@ class ShowDetailViewModelTest {
     private val tmdbRepository: TmdbRepository = mockk()
     private val appLauncher: AppLauncher = mockk(relaxed = true)
     private val swipeEventDao: SwipeEventDao = mockk(relaxed = true)
+    private val bookmarkDao: BookmarkDao = mockk(relaxed = true)
     private val testDispatcher = StandardTestDispatcher()
 
     private val show = TvShow(
@@ -57,7 +60,9 @@ class ShowDetailViewModelTest {
     }
 
     private fun buildViewModel(originProviderName: String? = null): ShowDetailViewModel {
-        return ShowDetailViewModel(showId = 1, tmdbRepository, appLauncher, swipeEventDao, originProviderName)
+        return ShowDetailViewModel(
+            showId = 1, tmdbRepository, appLauncher, swipeEventDao, bookmarkDao, originProviderName
+        )
     }
 
     @Test
@@ -103,6 +108,47 @@ class ShowDetailViewModelTest {
         val state = viewModel.uiState.value as ShowDetailUiState.Success
         assertEquals(false, state.userVote)
     }
+
+    @Test
+    fun `loads isBookmarked as true when the show already has a bookmark`() = runTest(testDispatcher) {
+        coEvery { bookmarkDao.getBookmark(1) } returns BookmarkEntity(showId = 1)
+
+        val viewModel = buildViewModel()
+        runCurrent()
+
+        val state = viewModel.uiState.value as ShowDetailUiState.Success
+        assertTrue(state.isBookmarked)
+    }
+
+    @Test
+    fun `onToggleBookmark inserts a bookmark and flips isBookmarked when not yet bookmarked`() =
+        runTest(testDispatcher) {
+            coEvery { bookmarkDao.getBookmark(1) } returns null
+            val viewModel = buildViewModel()
+            runCurrent()
+
+            viewModel.onToggleBookmark()
+            runCurrent()
+
+            coVerify { bookmarkDao.insertBookmark(match<BookmarkEntity> { it.showId == 1 }) }
+            val state = viewModel.uiState.value as ShowDetailUiState.Success
+            assertTrue(state.isBookmarked)
+        }
+
+    @Test
+    fun `onToggleBookmark deletes the bookmark and flips isBookmarked when already bookmarked`() =
+        runTest(testDispatcher) {
+            coEvery { bookmarkDao.getBookmark(1) } returns BookmarkEntity(showId = 1)
+            val viewModel = buildViewModel()
+            runCurrent()
+
+            viewModel.onToggleBookmark()
+            runCurrent()
+
+            coVerify { bookmarkDao.deleteBookmark(1) }
+            val state = viewModel.uiState.value as ShowDetailUiState.Success
+            assertEquals(false, state.isBookmarked)
+        }
 
     @Test
     fun `no dwell signal is recorded before the threshold elapses`() = runTest(testDispatcher) {
